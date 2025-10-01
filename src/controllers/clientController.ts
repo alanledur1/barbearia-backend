@@ -1,17 +1,54 @@
 import { Request, Response } from 'express';
 import { clientSchema } from "../schemas/clientSchema";
 import { ClientService } from "../services/clientService";
-
+import { CustomError } from '../utils/customErrors';
+import { ZodError } from 'zod';
 
 export class ClientController {
+
+    private clientService: ClientService;
+
+    constructor() {
+        this.clientService = new ClientService();
+    }
+
     async register(req: Request, res: Response) {
         try {
-            const data = clientSchema.parse(req.body);
-            const clientService = new ClientService();
-            const client = await clientService.register(data);
+            // A validação com Zod pode ser adicionada aqui se você tiver um schema
+            const { name, email, phone, password } = req.body;
+            if (!name || !email || !phone || !password) {
+                return res.status(400).json({ error: "Todos os campos são obrigatórios." });
+            }
+
+            const client = await this.clientService.register({ name, email, phone, password });
             return res.status(201).json(client);
         } catch (err: any) {
-            return res.status(400).json({ error: err.message });
+            if (err instanceof CustomError) {
+                return res.status(err.statusCode).json({ error: err.message });
+            }
+            if (err instanceof ZodError) {
+                return res.status(400).json({ error: "Dados inválidos.", details: err.issues });
+            }
+            console.error("Erro ao registrar cliente:", err);
+            return res.status(500).json({ error: 'Ocorreu um erro interno.' });
+        }
+    }
+
+    async login(req: Request, res: Response) {
+        try {
+            const { email, password } = req.body;
+            if (!email || !password) {
+                return res.status(400).json({ error: 'Email e senha são obrigatórios.'});
+            }
+
+            const result = await this.clientService.login(email, password);
+            return res.status(200).json(result);
+        } catch (err: any) {
+            if (err instanceof CustomError) {
+                return res.status(err.statusCode).json({ error: err.message });
+            }
+            console.error("Erro no login do controller:", err);
+            return res.status(500).json({ error: "Ocorreu um erro interno no login."});
         }
     }
 

@@ -5,36 +5,36 @@ export class AppointmentController {
     // Método para criar um novo agendamento
     async create(req: Request, res: Response) {
         try {
-            // Um schema de validação, use-o aqui:
-            // const data = appointmentSchema.parse(req.body);
-            const { clientId, serviceId, adminId, date } = req.body;
+            const { clientId, client, serviceId, date } = req.body;
 
-            // Basicamente, verifica se os campos essenciais estão presentes
-            if (!clientId || !serviceId || !date) {
-                return res.status(400).json({ error: 'Client ID, Service ID and Date are required.' });
+            // Validação
+            if (!serviceId || !date) {
+                 return res.status(400).json({ error: 'ID do serviço e data são obrigatórios.' });
+            }
+            if (!clientId && (!client || !client.name || !client.email || !client.phone)) {
+                 return res.status(400).json({ error: 'É necessário fornecer os dados do cliente ou um ID de cliente.' });
             }
 
             const appointmentDate = new Date(date);
             if (isNaN(appointmentDate.getTime())) {
-                return res.status(400).json({ error: 'Invalid date format.' });
+                return res.status(400).json({ error: 'Formato de data inválido.' });
             }
 
             // --- CONVERSÃO DE IDS PARA NUMBER AQUI ---
-            const clientIntId = parseInt(clientId, 10);
+            const clientIntId = clientId ? parseInt(clientId, 10) : undefined;
             const serviceIntId = parseInt(serviceId, 10);
 
-            if (isNaN(clientIntId) || isNaN(serviceIntId)) {
-                return res.status(400).json({ error: 'Invalid ID format. Client ID, Service ID, and Admin ID must be numbers.' });
+            if (isNaN(serviceIntId)) {
+                return res.status(400).json({ error: 'Invalid service ID format.' });
             }
-            // --- FIM DA CONVERSÃO ---
 
             const appointmentService = new AppointmentService();
-            const newAppointment = await appointmentService.createAppointment(
-                clientIntId,
-                serviceIntId,
-                adminId ? parseInt(adminId, 10) : undefined,
-                appointmentDate
-            );
+            const newAppointment = await appointmentService.createAppointment({
+                clientId: clientIntId,
+                clientData: client,
+                serviceId: serviceIntId,
+                requestedDateTime: appointmentDate,
+            });
 
             return res.status(201).json(newAppointment);
         } catch (err: any) {

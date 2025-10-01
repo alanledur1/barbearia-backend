@@ -1,8 +1,6 @@
-// src/services/serviceService.ts
-
 import { CustomError } from '../utils/customErrors';
 import { prisma } from './prisma.service';
-import { Prisma } from '@prisma/client'; // Importe os tipos do Prisma para melhor tipagem
+import { Prisma } from '@prisma/client';
 
 export class ServiceService {
     // Método para criar um novo serviço
@@ -23,6 +21,8 @@ export class ServiceService {
             throw error;
         }
     }
+
+
 
     // Método para listar todos os serviços
     async listAll() {

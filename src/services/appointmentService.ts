@@ -1,9 +1,16 @@
 import { Prisma } from '@prisma/client';
-import { Appointment } from '@prisma/client';
-import { Service } from '../models/service';
 import { CustomError } from '../utils/customErrors';
 import { prisma } from '../services/prisma.service';
 
+// Tipos para os dados do payload
+type ClientData = { name: string; email: string; phone: string; };
+type CreateAppointmentPayload = {
+    clientId?: number;
+    clientData?: ClientData;
+    serviceId: number;
+    requestedDateTime: Date;
+    adminId?: number;
+};
 
 export class AppointmentService {
 
@@ -22,51 +29,6 @@ export class AppointmentService {
         }
     }
 
-    async createAppointment(
-        clientId: number, serviceId: number, adminId: number | undefined, requestedDateTime: Date): Promise<Appointment> {
-
-        let assignedAdminId = adminId;
-
-        // Se nenhum adminId foi fornecido, encontre o barbeiro padrão
-        if (!assignedAdminId) {
-            const defaultAdmin = await prisma.admin.findFirst(); // Pega o primeiro admin da tabela
-            if (!defaultAdmin) {
-                throw new CustomError('Nenhum barbeiro configurado no sistema.', 500);
-            }
-            assignedAdminId = defaultAdmin.id;
-        }
-
-        // Valida se o cliente e o serviço existem
-        const client = await prisma.client.findUnique({ where: { id: clientId } });
-        if (!client) throw new CustomError('Cliente não encontrado.', 404);
-
-        const service = await prisma.service.findUnique({ where: { id: serviceId } });
-        if (!service) throw new CustomError('Serviço não encontrado.', 404);
-
-        // Obter a duração do serviço
-        const serviceDuration = service.duration;
-        this.validateBusinessHours(requestedDateTime, serviceDuration);
-
-        // 2. Verificar disponibilidade de horário
-        const isAvailable = await this.checkAvailability(requestedDateTime, serviceDuration, assignedAdminId);
-        if (!isAvailable) throw new CustomError('Horário selecionado não está disponível.', 409);
-
-
-        // 4. Se tudo estiver ok, cria o agendamento
-        const newAppointment = await prisma.appointment.create({
-            data: {
-                clientId,
-                serviceId,
-                adminId: assignedAdminId, // <-- Salva o ID do barbeiro correto
-                durationMinutes: serviceDuration,
-                date: requestedDateTime,
-                status: 'CONFIRMED',
-            },
-        });
-
-        return newAppointment as Appointment;
-    }
-
     async checkAvailability(
         startDateTime: Date,
         durationMinutes: number,
@@ -75,7 +37,7 @@ export class AppointmentService {
         const endDateTime = new Date(startDateTime.getTime() + durationMinutes * 60 * 1000);
 
         // Encontrar agendamentos existentes que se sobrepoem ao periodo desejado
-        const overlappingAppointments = await prisma.appointment.findMany({
+        const overlappingAppointments: { id: number; date: Date; durationMinutes: number }[] = await prisma.appointment.findMany({
             where: {
                 id: excludeAppointmentId ? { not: excludeAppointmentId } : undefined,
                 status: { in: ['CONFIRMED'] },
@@ -117,8 +79,64 @@ export class AppointmentService {
         });
     }
 
+    async createAppointment(payload: CreateAppointmentPayload): Promise<any> {
+        const { clientId, clientData, serviceId, requestedDateTime, adminId } = payload;
+        let finalClientId: number;
+
+        if (clientId) {
+            // Usuário logado
+            const clientExists = await prisma.client.findUnique({ where: { id: clientId } });
+            if (!clientExists) throw new CustomError('Cliente logado não encontrado no sistema.', 404);
+            finalClientId = clientId;
+        } else if (clientData) {
+            // Convidado: encontrar ou criar pelo email
+            let client = await prisma.client.findUnique({ where: { email: clientData.email } });
+            if (!client) {
+                client = await prisma.client.create({ data: {
+                    name: clientData.name,
+                    email: clientData.email,
+                    phone: clientData.phone,
+                }});
+            }
+            finalClientId = client.id;
+        } else {
+            throw new CustomError('Dados do cliente insuficientes para o agendamento.', 400);
+        }
+
+        // Admin: usa o adminId fornecido ou o padrão
+        let assignedAdminId = adminId;
+        if (!assignedAdminId) {
+            const defaultAdmin = await prisma.admin.findFirst();
+            if (!defaultAdmin) throw new CustomError('Nenhum barbeiro configurado no sistema.', 500);
+            assignedAdminId = defaultAdmin.id;
+        }
+
+        const service = await prisma.service.findUnique({ where: { id: serviceId } });
+        if (!service) throw new CustomError('Serviço não encontrado.', 404);
+
+        // Valida horário de funcionamento
+        this.validateBusinessHours(requestedDateTime, service.duration);
+
+        // Disponibilidade
+        const isAvailable = await this.checkAvailability(requestedDateTime, service.duration);
+        if (!isAvailable) throw new CustomError('Horário selecionado não está disponível.', 409);
+
+        const newAppointment = await prisma.appointment.create({
+            data: {
+                clientId: finalClientId,
+                serviceId,
+                adminId: assignedAdminId,
+                durationMinutes: service.duration,
+                date: requestedDateTime,
+                status: 'CONFIRMED',
+            },
+        });
+
+        return newAppointment;
+    }
+
     // Adicione os métodos update e delete para Appointment, com IDs como 'number'
-    async update(id: number, dataToUpdate: Prisma.AppointmentUpdateInput) {
+    async update(id: number, dataToUpdate: any) {
         const existing = await prisma.appointment.findUnique({ where: { id } });
         if (!existing) throw new CustomError('Agendamento não encontrado.', 404);
 

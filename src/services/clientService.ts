@@ -1,13 +1,73 @@
 import { CustomError } from '../utils/customErrors';
 import { prisma } from './prisma.service';
 import { Prisma } from '@prisma/client'; 
+import bcrypt from 'bcryptjs'; 
+import jwt from 'jsonwebtoken'; 
 
 export class ClientService {
     // Método para registrar (criar) um novo cliente
-    async register(data: { name: string, email: string, phone: string }) {
-        return await prisma.client.create({ data });
+    async register(data: Prisma.ClientCreateInput) {
+        // Garante que a senha foi fornecida
+        if (!data.password) {
+            throw new CustomError('A senha é obrigatória.', 400);
+        }
+
+        // Verifica se o email já está em uso
+        if (data.email) {
+            const existingClient = await prisma.client.findUnique({
+                where: { email: data.email },
+            });
+            if (existingClient) {
+                throw new CustomError('Este email já está em uso.', 409); // 409 Conflict
+            }
+        }
+
+        // Criptografa a senha antes de salvar
+        const hashedPassword = await bcrypt.hash(data.password, 10);
+
+        return await prisma.client.create({ 
+            data: {
+                name: data.name,
+                email: data.email,
+                phone: data.phone,
+                password: hashedPassword,
+            },
+            // Seleciona os campos para retornar, excluindo a senha
+            select: { id: true, name: true, email: true, phone: true }
+        });
     }
 
+    async login(email: string, passwordPlain: string) {
+        const client = await prisma.client.findUnique({
+            where: { email },
+        });
+
+        if (!client || !client.password) {
+            throw new CustomError("Email ou senha inválidos.", 401);
+        }
+
+        const isPasswordValid = await bcrypt.compare(passwordPlain, client.password);
+        if (!isPasswordValid) {
+            throw new CustomError("Email ou senha inválidos.", 401);
+        }
+
+        const jwtSecret = process.env.JWT_SECRET || 'your_super_secret_fallback_key_for_dev';
+
+        const token = jwt.sign(
+            { clientId: client.id, name: client.name },
+            jwtSecret,
+            { expiresIn: "24h" }
+        );
+
+        return {
+            token,
+            client: {
+                id: client.id,
+                name: client.name,
+                email: client.email,
+            },
+        };
+    }
     // Método para listar todos os clientes
     async listAll() {
         return await prisma.client.findMany();
