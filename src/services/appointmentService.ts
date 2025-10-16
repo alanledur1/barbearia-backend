@@ -10,6 +10,11 @@ type CreateAppointmentPayload = {
     serviceId: number;
     requestedDateTime: Date;
     adminId?: number;
+    notes?: string;
+};
+type ListAllFilters = {
+    date?: string;
+    clientId?: number;
 };
 
 export class AppointmentService {
@@ -58,13 +63,54 @@ export class AppointmentService {
     }
 
 
-    async listAll() {
+    async listAll(filters: ListAllFilters) {
+        const where: Prisma.AppointmentWhereInput = {};
+
+        // Se um clientId foi fornecido, adiciona ao filtro
+        if (filters.clientId) {
+            where.clientId = filters.clientId;
+        }
+
+        // Se uma data foi fornecida, filtra os agendamentos para aquele dia específico
+        if (filters.date) {
+            const startDate = new Date(filters.date);
+            startDate.setUTCHours(0, 0, 0, 0);
+
+            const endDate = new Date(startDate);
+            endDate.setUTCDate(startDate.getUTCDate() + 1);
+
+            where.date = {
+                gte: startDate,
+                lt: endDate,
+            };
+        }
+
         return await prisma.appointment.findMany({
-            include: {
+            where, // Aplica os filtros construídos
+            select: {
+                id: true,
+                date: true,
+                durationMinutes: true,
+                status: true,
+                notes: true,
+                // Garante que os campos de convidado sejam retornados
+                guestName: true,
+                guestEmail: true,
+                guestPhone: true,
+                // Mantém o retorno dos relacionamentos
                 client: true,
                 service: true,
-                admin: true,
+                serviceId: true,
+                admin: {
+                    select: {
+                        // Seleciona apenas os campos seguros do admin, evitando a senha
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                }
             },
+            orderBy: { date: 'asc' }, // Ordena por data crescente
         });
     }
 
@@ -80,84 +126,101 @@ export class AppointmentService {
     }
 
     async createAppointment(payload: CreateAppointmentPayload): Promise<any> {
-        const { clientId, clientData, serviceId, requestedDateTime, adminId } = payload;
-        let finalClientId: number;
+        const { clientId, clientData, serviceId, requestedDateTime, adminId, notes } = payload;
 
-        if (clientId) {
-            // Usuário logado
-            const clientExists = await prisma.client.findUnique({ where: { id: clientId } });
-            if (!clientExists) throw new CustomError('Cliente logado não encontrado no sistema.', 404);
-            finalClientId = clientId;
-        } else if (clientData) {
-            // Convidado: encontrar ou criar pelo email
-            let client = await prisma.client.findUnique({ where: { email: clientData.email } });
-            if (!client) {
-                client = await prisma.client.create({ data: {
-                    name: clientData.name,
-                    email: clientData.email,
-                    phone: clientData.phone,
-                }});
-            }
-            finalClientId = client.id;
-        } else {
-            throw new CustomError('Dados do cliente insuficientes para o agendamento.', 400);
-        }
-
-        // Admin: usa o adminId fornecido ou o padrão
-        let assignedAdminId = adminId;
-        if (!assignedAdminId) {
-            const defaultAdmin = await prisma.admin.findFirst();
-            if (!defaultAdmin) throw new CustomError('Nenhum barbeiro configurado no sistema.', 500);
-            assignedAdminId = defaultAdmin.id;
+        // Rejeita a criação de agendamentos no passado
+        if (requestedDateTime < new Date()) {
+            throw new CustomError('A data/hora do agendamento deve ser no futuro.', 400);
         }
 
         const service = await prisma.service.findUnique({ where: { id: serviceId } });
         if (!service) throw new CustomError('Serviço não encontrado.', 404);
 
-        // Valida horário de funcionamento
+        // Validações de horário (permanecem as mesmas)
         this.validateBusinessHours(requestedDateTime, service.duration);
-
-        // Disponibilidade
         const isAvailable = await this.checkAvailability(requestedDateTime, service.duration);
         if (!isAvailable) throw new CustomError('Horário selecionado não está disponível.', 409);
 
+        // --- LÓGICA DE CLIENTE ATUALIZADA ---
+        const appointmentData: Prisma.AppointmentCreateInput = {
+            date: requestedDateTime,
+            durationMinutes: service.duration,
+            status: 'CONFIRMED',
+            notes: notes,
+            service: { connect: { id: serviceId } },
+        };
+
+        // Define quem é o profissional responsável (admin)
+        let assignedAdminId = adminId;
+        if (!assignedAdminId) {
+            const defaultAdmin = await prisma.admin.findFirst();
+            if (!defaultAdmin) throw new CustomError('Nenhum profissional configurado no sistema.', 500);
+            assignedAdminId = defaultAdmin.id;
+        }
+        appointmentData.admin = { connect: { id: assignedAdminId } };
+        
+        // Define para qual cliente é o agendamento
+        if (clientId) {
+            // Caso 1: Cliente está logado. Associa o agendamento ao seu ID.
+            const clientExists = await prisma.client.findUnique({ where: { id: clientId } });
+            if (!clientExists) throw new CustomError('Cliente logado não encontrado no sistema.', 404);
+            appointmentData.client = { connect: { id: clientId } };
+
+        } else if (clientData?.phone) {
+            // Caso 2: Cliente convidado OU o admin está criando o agendamento para um cliente específico.
+            const existingClient = await prisma.client.findFirst({
+                where: { phone: clientData.phone },
+            });
+
+            if (existingClient) {
+                // Se o cliente já existe, associa o agendamento a ele.
+                appointmentData.client = { connect: { id: existingClient.id } };
+            } else {
+                // Se não existe, salva os dados do convidado diretamente no agendamento.
+                // **NÃO CRIA UM NOVO CLIENTE.**
+                appointmentData.guestName = clientData.name;
+                appointmentData.guestEmail = clientData.email;
+                appointmentData.guestPhone = clientData.phone;
+            }
+        } else {
+            throw new CustomError('Dados do cliente insuficientes para o agendamento.', 400);
+        }
+        // Cria o agendamento no banco de dados
         const newAppointment = await prisma.appointment.create({
-            data: {
-                clientId: finalClientId,
-                serviceId,
-                adminId: assignedAdminId,
-                durationMinutes: service.duration,
-                date: requestedDateTime,
-                status: 'CONFIRMED',
-            },
+            data: appointmentData,
         });
 
         return newAppointment;
     }
 
     // Adicione os métodos update e delete para Appointment, com IDs como 'number'
-    async update(id: number, dataToUpdate: any) {
+    async update(id: number, dataToUpdate: { status?: 'COMPLETED' | 'CANCELLED', date?: string | Date, durationMinutes?: number }) {
         const existing = await prisma.appointment.findUnique({ where: { id } });
-        if (!existing) throw new CustomError('Agendamento não encontrado.', 404);
-
-        const newStartDate = existing.date
-            ? new Date(dataToUpdate.date as string | Date)
-            : existing.date;
-
-        const newDuration = typeof dataToUpdate.durationMinutes === 'number'
-            ? dataToUpdate.durationMinutes
-            : existing.durationMinutes;
-
-        this.validateBusinessHours(newStartDate, newDuration);
-
-        if (newStartDate.getTime() !== existing.date.getTime() || newDuration !== existing.durationMinutes) {
-            const isAvailable = await this.checkAvailability(newStartDate, newDuration, id);
-            if (!isAvailable) throw new CustomError('Horário selecionado não está disponível.', 409);
+        if (!existing) {
+            throw new CustomError('Agendamento não encontrado.', 404);
         }
 
+        // --- LÓGICA DE ATUALIZAÇÃO CORRIGIDA ---
+
+        // 1. Verifica se a data ou a duração estão sendo alteradas
+        const isRescheduling = dataToUpdate.date || dataToUpdate.durationMinutes;
+
+        if (isRescheduling) {
+            // 2. Se for um reagendamento, executa a validação de horário
+            const newStartDate = dataToUpdate.date ? new Date(dataToUpdate.date) : existing.date;
+            const newDuration = typeof dataToUpdate.durationMinutes === 'number' ? dataToUpdate.durationMinutes : existing.durationMinutes;
+
+            this.validateBusinessHours(newStartDate, newDuration);
+
+            const isAvailable = await this.checkAvailability(newStartDate, newDuration, id);
+            if (!isAvailable) {
+                throw new CustomError('Horário selecionado não está disponível para reagendamento.', 409);
+            }
+        }
+
+        // 3. Executa a atualização no banco de dados.
+        // Isso funciona tanto para a mudança de status quanto para o reagendamento.
         return prisma.appointment.update({ where: { id }, data: dataToUpdate });
-
-
     }
 
 

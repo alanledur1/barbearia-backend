@@ -12,14 +12,14 @@ export class AuthController {
     // 1. Método para Registrar um novo Admin
     async register(req: Request, res: Response) {
         try {
-            const { name, email, password } = req.body;
+            const { name, email, password, phone } = req.body;
 
             if (!name || !email || !password) {
                 return res.status(400).json({ error: 'Name, email, and password are required.' });
             }
 
             // Chama o serviço para registrar o admin usando 'this.authService'
-            const newAdmin = await this.authService.register({ name, email, password });
+            const newAdmin = await this.authService.register({ name, email, password, phone });
 
             return res.status(201).json(newAdmin);
         } catch (error: any) {

@@ -20,6 +20,7 @@ model Admin {
   email        String        @unique
   password     String
   name         String        @default("Admin")
+  phone        String? 
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   appointments Appointment[]
@@ -48,11 +49,19 @@ model Appointment {
   date            DateTime
   durationMinutes Int
   status          AppointmentStatus @default(CONFIRMED) // Usando o Enum
+  
+  // campos para dados do convidado
+  guestName       String?
+  guestEmail      String?
+  guestPhone      String?
 
-  client    Client  @relation(fields: [clientId], references: [id])
-  clientId  Int
+
+  client    Client?  @relation(fields: [clientId], references: [id])
+  clientId  Int?
+
   service   Service @relation(fields: [serviceId], references: [id])
   serviceId Int
   admin     Admin?  @relation(fields: [adminId], references: [id])
   adminId   Int?
+  notes     String?
 }

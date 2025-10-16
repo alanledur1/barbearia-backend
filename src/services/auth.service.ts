@@ -26,12 +26,14 @@ export class AuthService {
                 data: {
                     name: data.name,
                     email: data.email,
-                    password: hashedPassword, // Salva a senha hasheada
+                    password: hashedPassword,
+                    phone: data.phone, // Salva a senha hasheada
                 },
                 select: {
                     id: true,
                     name: true,
                     email: true,
+                    phone: true,
                     createdAt: true,
                     updatedAt: true,
 

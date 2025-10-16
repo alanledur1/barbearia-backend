@@ -6,6 +6,7 @@ export class ServiceService {
     // Método para criar um novo serviço
     // Os dados de um serviço são name, description, price, duration (conforme seu schema.prisma)
     async create(data: { name: string; description: string; price: number; duration: number; }) {
+        
         try {
             const newService = await prisma.service.create({
                 data: {
@@ -77,16 +78,19 @@ export class ServiceService {
             throw new CustomError('Serviço não encontrado para exclusão.', 404);
         }
 
-        // 1. Verifica se existem agendamentos vinculados
+        // --- VERIFICAÇÃO CORRIGIDA E MAIS PRECISA ---
         const relatedAppointments = await prisma.appointment.count({
-            where: { 
+            where: {
                 serviceId: id,
-                status: 'CONFIRMED', // Considera apenas agendamentos não cancelados
-                date: { gte: new Date() } // Considera apenas agendamentos futuros
+                // Apenas status CONFIRMED bloqueia a exclusão
+                status: 'CONFIRMED',
+                // Apenas agendamentos futuros (ou de hoje) bloqueiam
+                date: {
+                    gte: new Date() // gte: "maior ou igual a" data/hora atual
+                }
             },
         });
 
-        // 2. Se existirem, lança um erro customizado com status 409
         if (relatedAppointments > 0) {
             throw new CustomError(
                 `Não é possível excluir: serviço vinculado a ${relatedAppointments} agendamento(s) futuro(s).`,
@@ -94,7 +98,7 @@ export class ServiceService {
             );
         }
 
-        // 3. Se não existirem, prossegue com a deleção
+        // Se a verificação passar, prossegue com a exclusão.
         return await prisma.service.delete({ where: { id } });
     }
 }
