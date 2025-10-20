@@ -3,10 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "build": "tsc",
-    "start": "node dist/server.js || tail -f /dev/null",
-    "prisma": "prisma"
+    "build": "tsc"
   },
   "keywords": [],
   "author": "",
