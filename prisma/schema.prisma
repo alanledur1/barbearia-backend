@@ -5,8 +5,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  // CORREÇÃO: Adicionar "?sslmode=require" ao final da URL
-  url      = env("DATABASE_URL") + "?sslmode=require" 
+  url      = env("DATABASE_URL")
 }
 
 // Enum para padronizar os status de agendamento
