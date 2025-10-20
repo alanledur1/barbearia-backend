@@ -20,3 +20,10 @@ process.on("uncaughtException", (err) => {
 process.on("unhandledRejection", (reason) => {
   console.error("⚠️ Unhandled Rejection:", reason);
 });
+process.on("SIGTERM", () => {
+  console.log("⚠️ SIGTERM recebido — o container está sendo encerrado.");
+});
+
+process.on("exit", (code) => {
+  console.log("🛑 Processo finalizado com código:", code);
+});
