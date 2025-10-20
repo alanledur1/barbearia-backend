@@ -5,17 +5,17 @@ const prisma = new PrismaClient();
 
 async function main() {
   // Define a senha padrão (você pode alterar depois)
-  const passwordHash = await bcrypt.hash("admin123", 10);
+  const passwordHash = await bcrypt.hash("admin08983547", 10);
 
   // Cria o admin se ainda não existir
   const admin = await prisma.admin.upsert({
     where: { email: "admin@barbearia.com" },
     update: {}, // não altera se já existir
     create: {
-      name: "Administrador",
+      name: "Admin",
       email: "admin@barbearia.com",
       password: passwordHash,
-      phone: "(00) 00000-0000",
+      phone: "51998177919",
     },
   });
 
