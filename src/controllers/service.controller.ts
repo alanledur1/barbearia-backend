@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { ServiceService } from '../services/serviceService';
 import { CustomError } from '../utils/customErrors';
+import { error } from 'console';
 
 export class ServiceController {
     async create(req: Request, res: Response) {
@@ -111,7 +112,7 @@ export class ServiceController {
             }
         }
 
-        console.error("Error deleting service:", err);
+        console.error("Error deleting service:", error);
         return res.status(500).json({ error: 'Ocorreu um erro interno ao deletar o serviço.' });
     }
     

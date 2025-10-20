@@ -200,7 +200,16 @@ export class AppointmentService {
             throw new CustomError('Agendamento não encontrado.', 404);
         }
 
-        // --- LÓGICA DE ATUALIZAÇÃO CORRIGIDA ---
+        if (dataToUpdate.status === 'CANCELLED') {
+            const now = new Date();
+            const appointmentDate = new Date(existing.date);
+            const hoursDifference = (appointmentDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+            // Se a diferenca for menor que 1 hora, nao permite o cancelamento
+            if (hoursDifference < 1) {
+                throw new CustomError('Cancelamentos devem ser feitos com pelo menos 1 hora de antecedência.', 400);
+            }
+        }
 
         // 1. Verifica se a data ou a duração estão sendo alteradas
         const isRescheduling = dataToUpdate.date || dataToUpdate.durationMinutes;
