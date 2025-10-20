@@ -6,7 +6,9 @@
     "dev": "ts-node-dev src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "seed": "ts-node prisma/seed.ts"
+    "migrate": "npx prisma migrate deploy",
+    "seed": "ts-node src/prisma/seed.ts",
+    "deploy": "npm run migrate && npm run seed && npm run build"
   },
   "keywords": [],
   "author": "",
