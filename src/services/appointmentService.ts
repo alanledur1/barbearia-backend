@@ -5,7 +5,6 @@ import { sendWhatsappMessage } from '../notifications/whatsapp.service';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-
 // Tipos para os dados do payload
 type ClientData = { name: string; email: string; phone: string; };
 type CreateAppointmentPayload = {
@@ -19,6 +18,14 @@ type CreateAppointmentPayload = {
 type ListAllFilters = {
     date?: string;
     clientId?: number;
+};
+
+// TIPO DE UPDATE CORRIGIDO (para incluir endDate)
+type UpdateAppointmentData = {
+    status?: 'COMPLETED' | 'CANCELLED';
+    date?: string | Date;
+    durationMinutes?: number;
+    endDate?: Date; // <-- Adicionado
 };
 
 export class AppointmentService {
@@ -38,13 +45,13 @@ export class AppointmentService {
         }
     }
 
+    // Função de check correta (como você já tinha)
     async checkAvailability(
         startDateTime: Date,
         endDateTime: Date, // <-- Recebe a data final
         excludeAppointmentId?: number
     ): Promise<boolean> {
 
-        // Esta query faz TUDO no banco de dados.
         const overlappingCount = await prisma.appointment.count({
             where: {
                 id: excludeAppointmentId ? { not: excludeAppointmentId } : undefined,
@@ -56,7 +63,6 @@ export class AppointmentService {
             }
         });
 
-        // Se a contagem for 0, o horário está disponível.
         return overlappingCount === 0;
     }
 
@@ -64,12 +70,9 @@ export class AppointmentService {
     async listAll(filters: ListAllFilters) {
         const where: Prisma.AppointmentWhereInput = {};
 
-        // Se um clientId foi fornecido, adiciona ao filtro
         if (filters.clientId) {
             where.clientId = filters.clientId;
         }
-
-        // Se uma data foi fornecida, filtra os agendamentos para aquele dia específico
         if (filters.date) {
             const startDate = new Date(filters.date);
             startDate.setUTCHours(0, 0, 0, 0);
@@ -84,31 +87,29 @@ export class AppointmentService {
         }
 
         return await prisma.appointment.findMany({
-            where, // Aplica os filtros construídos
+            where,
             select: {
                 id: true,
                 date: true,
+                endDate: true, // <-- ADICIONADO AQUI
                 durationMinutes: true,
                 status: true,
                 notes: true,
-                // Garante que os campos de convidado sejam retornados
                 guestName: true,
                 guestEmail: true,
                 guestPhone: true,
-                // Mantém o retorno dos relacionamentos
                 client: true,
                 service: true,
                 serviceId: true,
                 admin: {
                     select: {
-                        // Seleciona apenas os campos seguros do admin, evitando a senha
                         id: true,
                         name: true,
                         email: true,
                     }
                 }
             },
-            orderBy: { date: 'asc' }, // Ordena por data crescente
+            orderBy: { date: 'asc' },
         });
     }
 
@@ -126,7 +127,6 @@ export class AppointmentService {
     async createAppointment(payload: CreateAppointmentPayload): Promise<any> {
         const { clientId, clientData, serviceId, requestedDateTime, adminId, notes } = payload;
 
-        // Rejeita agendamentos no passado
         if (requestedDateTime < new Date()) {
             throw new CustomError('A data/hora do agendamento deve ser no futuro.', 400);
         }
@@ -136,22 +136,23 @@ export class AppointmentService {
 
         const endDateTime = new Date(requestedDateTime.getTime() + service.duration * 60 * 1000);
 
-        // Valida horário e disponibilidade
         this.validateBusinessHours(requestedDateTime, service.duration);
+        
+        // Chamada correta (sem o durationMinutes)
         const isAvailable = await this.checkAvailability(requestedDateTime, endDateTime);
         if (!isAvailable) throw new CustomError('Horário selecionado não está disponível.', 409);
 
         // Monta o objeto do agendamento
         const appointmentData: Prisma.AppointmentCreateInput = {
             date: requestedDateTime,
-            endDate: endDateTime,
+            endDate: endDateTime, // <-- Correto
             durationMinutes: service.duration,
             status: 'CONFIRMED',
             notes,
             service: { connect: { id: serviceId } },
         };
 
-        // Define o admin
+        // ... (Sua lógica de 'Define o admin' e 'Define o cliente' continua aqui) ...
         let assignedAdminId = adminId;
         if (!assignedAdminId) {
             const defaultAdmin = await prisma.admin.findFirst();
@@ -159,13 +160,10 @@ export class AppointmentService {
             assignedAdminId = defaultAdmin.id;
         }
         appointmentData.admin = { connect: { id: assignedAdminId } };
-
-        // Define o cliente
         if (clientId) {
             appointmentData.client = { connect: { id: clientId } };
         } else if (clientData?.phone) {
             const existingClient = await prisma.client.findFirst({ where: { phone: clientData.phone } });
-
             if (existingClient) {
                 appointmentData.client = { connect: { id: existingClient.id } };
             } else {
@@ -177,8 +175,6 @@ export class AppointmentService {
             throw new CustomError('Dados do cliente insuficientes para o agendamento.', 400);
         }
 
-        // ✅ Cria o agendamento no banco
-        // Cria o agendamento no banco de dados
         const appointment = await prisma.appointment.create({
             data: appointmentData,
             include: {
@@ -188,7 +184,7 @@ export class AppointmentService {
             },
         });
 
-        // Envia mensagem no WhatsApp
+        // Envia mensagem no WhatsApp (Apenas 1 bloco)
         try {
             const formattedDate = format(new Date(appointment.date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
             const phone = appointment.guestPhone || clientData?.phone || appointment.client?.phone;
@@ -196,7 +192,6 @@ export class AppointmentService {
             if (phone) {
                 const name = appointment.guestName || clientData?.name || appointment.client?.name || "cliente";
                 const message = `💈 Olá ${name}! Seu horário foi confirmado para ${formattedDate}. Estamos te esperando na Barbearia! ✂️`;
-
                 await sendWhatsappMessage(phone, message);
             }
         } catch (error) {
@@ -207,8 +202,7 @@ export class AppointmentService {
     }
 
 
-    // Adicione os métodos update e delete para Appointment, com IDs como 'number'
-    async update(id: number, dataToUpdate: { status?: 'COMPLETED' | 'CANCELLED', date?: string | Date, durationMinutes?: number }) {
+    async update(id: number, dataToUpdate: UpdateAppointmentData) { // <-- Usa o Tipo Corrigido
         const existing = await prisma.appointment.findUnique({ where: { id } });
         if (!existing) {
             throw new CustomError('Agendamento não encontrado.', 404);
@@ -219,21 +213,19 @@ export class AppointmentService {
             const appointmentDate = new Date(existing.date);
             const hoursDifference = (appointmentDate.getTime() - now.getTime()) / (1000 * 60 * 60);
 
-            // Se a diferenca for menor que 1 hora, nao permite o cancelamento
             if (hoursDifference < 1) {
                 throw new CustomError('Cancelamentos devem ser feitos com pelo menos 1 hora de antecedência.', 400);
             }
         }
 
-        // 1. Verifica se a data ou a duração estão sendo alteradas
         const isRescheduling = dataToUpdate.date || dataToUpdate.durationMinutes;
 
         if (isRescheduling) {
-            // 2. Se for um reagendamento, executa a validação de horário
             const newStartDate = dataToUpdate.date ? new Date(dataToUpdate.date) : existing.date;
             const newDuration = typeof dataToUpdate.durationMinutes === 'number' ? dataToUpdate.durationMinutes : existing.durationMinutes;
-
+            
             const newEndDate = new Date(newStartDate.getTime() + newDuration * 60 * 1000);
+            
             this.validateBusinessHours(newStartDate, newDuration);
 
             const isAvailable = await this.checkAvailability(newStartDate, newEndDate, id);
@@ -241,13 +233,10 @@ export class AppointmentService {
                 throw new CustomError('Horário selecionado não está disponível para reagendamento.', 409);
             }
 
-            // IMPORTANTE: Adicione o newEndDate aos dados para salvar
-            // Precisamos forçar o tipo 'any' aqui para adicionar a propriedade
-            (dataToUpdate as any).endDate = newEndDate;
+            // Adiciona o endDate aos dados de atualização (sem 'as any')
+            dataToUpdate.endDate = newEndDate;
         }
-
-        // 3. Executa a atualização no banco de dados.
-        // Isso funciona tanto para a mudança de status quanto para o reagendamento.
+        
         return prisma.appointment.update({ where: { id }, data: dataToUpdate });
     }
 
@@ -265,4 +254,3 @@ export class AppointmentService {
         }
     }
 }
-
