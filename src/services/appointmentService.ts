@@ -5,7 +5,7 @@ import { sendWhatsappMessage } from '../notifications/whatsapp.service';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-// Tipos para os dados do payload
+// Tipos
 type ClientData = { name: string; email: string; phone: string; };
 type CreateAppointmentPayload = {
     clientId?: number;
@@ -19,20 +19,19 @@ type ListAllFilters = {
     date?: string;
     clientId?: number;
 };
-
-// TIPO DE UPDATE CORRIGIDO (para incluir endDate)
+// Tipo de update para incluir o endDate opcional
 type UpdateAppointmentData = {
     status?: 'COMPLETED' | 'CANCELLED';
     date?: string | Date;
     durationMinutes?: number;
-    endDate?: Date; // <-- Adicionado
+    endDate?: Date;
 };
 
 export class AppointmentService {
 
     private validateBusinessHours(start: Date, durationMinutes: number) {
-        const businessOpenHour = 9; // Início do horário de funcionamento
-        const businessCloseHour = 20; // Fim do horário de funcionamento
+        const businessOpenHour = 9;
+        const businessCloseHour = 20;
         const endDate = new Date(start.getTime() + durationMinutes * 60 * 1000);
 
         if (start.getHours() < businessOpenHour) {
@@ -45,24 +44,24 @@ export class AppointmentService {
         }
     }
 
-    // Função de check correta (como você já tinha)
+    // Função de check correta (apenas 2 parâmetros de data)
     async checkAvailability(
         startDateTime: Date,
-        endDateTime: Date, // <-- Recebe a data final
+        endDateTime: Date,
         excludeAppointmentId?: number
     ): Promise<boolean> {
-
+    
         const overlappingCount = await prisma.appointment.count({
             where: {
                 id: excludeAppointmentId ? { not: excludeAppointmentId } : undefined,
                 status: 'CONFIRMED',
                 AND: [
-                    { date: { lt: endDateTime } },      // Começa ANTES do novo terminar
-                    { endDate: { gt: startDateTime } } // Termina DEPOIS do novo começar
+                    { date: { lt: endDateTime } },
+                    { endDate: { gt: startDateTime } }
                 ]
             }
         });
-
+    
         return overlappingCount === 0;
     }
 
@@ -76,14 +75,9 @@ export class AppointmentService {
         if (filters.date) {
             const startDate = new Date(filters.date);
             startDate.setUTCHours(0, 0, 0, 0);
-
             const endDate = new Date(startDate);
             endDate.setUTCDate(startDate.getUTCDate() + 1);
-
-            where.date = {
-                gte: startDate,
-                lt: endDate,
-            };
+            where.date = { gte: startDate, lt: endDate };
         }
 
         return await prisma.appointment.findMany({
@@ -91,7 +85,7 @@ export class AppointmentService {
             select: {
                 id: true,
                 date: true,
-                endDate: true, // <-- ADICIONADO AQUI
+                endDate: true, // Incluído
                 durationMinutes: true,
                 status: true,
                 notes: true,
@@ -101,13 +95,7 @@ export class AppointmentService {
                 client: true,
                 service: true,
                 serviceId: true,
-                admin: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                    }
-                }
+                admin: { select: { id: true, name: true, email: true } }
             },
             orderBy: { date: 'asc' },
         });
@@ -116,11 +104,7 @@ export class AppointmentService {
     async findById(id: number) {
         return await prisma.appointment.findUnique({
             where: { id },
-            include: {
-                client: true,
-                service: true,
-                admin: true,
-            },
+            include: { client: true, service: true, admin: true },
         });
     }
 
@@ -134,25 +118,25 @@ export class AppointmentService {
         const service = await prisma.service.findUnique({ where: { id: serviceId } });
         if (!service) throw new CustomError('Serviço não encontrado.', 404);
 
+        // Calcula o endDate
         const endDateTime = new Date(requestedDateTime.getTime() + service.duration * 60 * 1000);
 
         this.validateBusinessHours(requestedDateTime, service.duration);
         
-        // Chamada correta (sem o durationMinutes)
+        // Chama o checkAvailability da forma correta
         const isAvailable = await this.checkAvailability(requestedDateTime, endDateTime);
         if (!isAvailable) throw new CustomError('Horário selecionado não está disponível.', 409);
 
-        // Monta o objeto do agendamento
         const appointmentData: Prisma.AppointmentCreateInput = {
             date: requestedDateTime,
-            endDate: endDateTime, // <-- Correto
+            endDate: endDateTime, // Salva o endDate
             durationMinutes: service.duration,
             status: 'CONFIRMED',
             notes,
             service: { connect: { id: serviceId } },
         };
 
-        // ... (Sua lógica de 'Define o admin' e 'Define o cliente' continua aqui) ...
+        // Lógica de Admin
         let assignedAdminId = adminId;
         if (!assignedAdminId) {
             const defaultAdmin = await prisma.admin.findFirst();
@@ -160,6 +144,8 @@ export class AppointmentService {
             assignedAdminId = defaultAdmin.id;
         }
         appointmentData.admin = { connect: { id: assignedAdminId } };
+
+        // Lógica de Cliente
         if (clientId) {
             appointmentData.client = { connect: { id: clientId } };
         } else if (clientData?.phone) {
@@ -177,14 +163,10 @@ export class AppointmentService {
 
         const appointment = await prisma.appointment.create({
             data: appointmentData,
-            include: {
-                client: true,
-                service: true,
-                admin: true,
-            },
+            include: { client: true, service: true, admin: true },
         });
 
-        // Envia mensagem no WhatsApp (Apenas 1 bloco)
+        // Bloco do WhatsApp (APENAS 1 VEZ)
         try {
             const formattedDate = format(new Date(appointment.date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
             const phone = appointment.guestPhone || clientData?.phone || appointment.client?.phone;
@@ -202,7 +184,7 @@ export class AppointmentService {
     }
 
 
-    async update(id: number, dataToUpdate: UpdateAppointmentData) { // <-- Usa o Tipo Corrigido
+    async update(id: number, dataToUpdate: UpdateAppointmentData) {
         const existing = await prisma.appointment.findUnique({ where: { id } });
         if (!existing) {
             throw new CustomError('Agendamento não encontrado.', 404);
@@ -228,12 +210,12 @@ export class AppointmentService {
             
             this.validateBusinessHours(newStartDate, newDuration);
 
+            // Chamada correta (com ID para excluir ele mesmo da verificação)
             const isAvailable = await this.checkAvailability(newStartDate, newEndDate, id);
             if (!isAvailable) {
                 throw new CustomError('Horário selecionado não está disponível para reagendamento.', 409);
             }
-
-            // Adiciona o endDate aos dados de atualização (sem 'as any')
+            
             dataToUpdate.endDate = newEndDate;
         }
         
@@ -243,10 +225,7 @@ export class AppointmentService {
 
     async delete(id: number) {
         try {
-            const deletedAppointment = await prisma.appointment.delete({
-                where: { id },
-            });
-            return deletedAppointment;
+            return await prisma.appointment.delete({ where: { id } });
         } catch (error: any) {
             console.error("Error deleting appointment in service:", error);
             if (error.code === 'P2025') throw new CustomError('Agendamento não encontrado para exclusão.', 404);
