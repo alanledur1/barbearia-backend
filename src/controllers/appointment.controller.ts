@@ -145,4 +145,6 @@ export class AppointmentController {
             return res.status(500).json({ error: 'Ocorreu um erro ao deletar o agendamento.' });
         }
     }
+
+    
 }
