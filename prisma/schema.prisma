@@ -39,7 +39,7 @@ model Client {
 model Appointment {
   id              Int               @id @default(autoincrement())
   date            DateTime
-  endDate         DateTime
+  endDate         DateTime?
   durationMinutes Int
   status          AppointmentStatus @default(CONFIRMED)
   guestName       String?

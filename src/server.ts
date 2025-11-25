@@ -10,7 +10,7 @@ console.log("--- Verificando DATABASE_URL ---");
 console.log("URL do Banco de Dados:", process.env.DATABASE_URL);
 console.log("--- Fim da Verificação ---");
 
-const PORT = Number(process.env.PORT) || 8080;
+const PORT = Number(process.env.PORT) || 3001;
 
 (async () => {
   try {
