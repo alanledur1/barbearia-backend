@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "ts-node-dev src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node dist/src/server.js",
     "migrate": "npx prisma migrate deploy",
     "seed": "ts-node src/prisma/seed.ts",
     "deploy": "npm run migrate && npm run seed && npm run build"
