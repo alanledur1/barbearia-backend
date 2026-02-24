@@ -28,21 +28,26 @@ type UpdateAppointmentData = {
 
 export class AppointmentService {
 
-    private validateBusinessHours(start: Date, durationMinutes: number) {
+private validateBusinessHours(start: Date, durationMinutes: number) {
         const businessOpenHour = 9;
         const businessCloseHour = 20;
         const endDate = new Date(start.getTime() + durationMinutes * 60 * 1000);
 
-        if (start.getHours() < businessOpenHour) {
+        // Subtrai 3 horas do horário UTC para obter o horário correto de Brasília (UTC-3)
+        // O módulo 24 garante que, ao passar da meia-noite, a hora continue correta
+        const startHourBRT = (start.getUTCHours() - 3 + 24) % 24;
+        const endHourBRT = (endDate.getUTCHours() - 3 + 24) % 24;
+        const endMinutesBRT = endDate.getUTCMinutes(); // Os minutos não mudam com o fuso
+
+        if (startHourBRT < businessOpenHour) {
             throw new CustomError(`Agendamentos permitidos apenas a partir das ${businessOpenHour}:00.`, 400);
         }
 
-        if (endDate.getHours() > businessCloseHour ||
-            (endDate.getHours() === businessCloseHour && endDate.getMinutes() > 0)) {
+        if (endHourBRT > businessCloseHour ||
+            (endHourBRT === businessCloseHour && endMinutesBRT > 0)) {
             throw new CustomError(`Agendamentos permitidos até as ${businessCloseHour}:00.`, 400);
         }
     }
-
     // Função de check correta (apenas 2 parâmetros de data)
     async checkAvailability(
         startDateTime: Date,
