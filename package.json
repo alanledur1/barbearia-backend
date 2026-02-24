@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "ts-node-dev src/server.ts",
     "build": "tsc",
     "start": "node dist/src/server.js",
