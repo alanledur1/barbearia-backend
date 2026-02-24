@@ -160,7 +160,7 @@ export class AppointmentService {
             throw new CustomError('Dados do cliente insuficientes para o agendamento.', 400);
         }
 
-        const appointment = await prisma.$transaction(async (tx) => {
+        const appointment = await prisma.$transaction(async (tx: any) => {
             const overlapping = await tx.appointment.count({
                 where: {
                     status: 'CONFIRMED',
