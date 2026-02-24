@@ -1,0 +1,57 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enum para padronizar os status de agendamento
+enum AppointmentStatus {
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+model Admin {
+  id           Int           @id @default(autoincrement())
+  email        String        @unique
+  password     String
+  name         String        @default("Admin")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  appointments Appointment[]
+}
+
+model Service {
+  id           Int           @id @default(autoincrement())
+  name         String
+  description  String
+  price        Float
+  duration     Int // duração em minutos
+  appointments Appointment[]
+}
+
+model Client {
+  id           Int           @id @default(autoincrement())
+  name         String
+  email        String?
+  phone        String
+  appointments Appointment[]
+}
+
+model Appointment {
+  id              Int               @id @default(autoincrement())
+  date            DateTime
+  durationMinutes Int
+  status          AppointmentStatus @default(CONFIRMED) // Usando o Enum
+
+  client    Client  @relation(fields: [clientId], references: [id])
+  clientId  Int
+  service   Service @relation(fields: [serviceId], references: [id])
+  serviceId Int
+  admin     Admin?  @relation(fields: [adminId], references: [id])
+  adminId   Int?
+}

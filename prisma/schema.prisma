@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Admin {
+  id           Int           @id @default(autoincrement())
+  email        String        @unique
+  password     String
+  name         String        @default("Admin")
+  phone        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  appointments Appointment[]
+}
+
+model Service {
+  id           Int           @id @default(autoincrement())
+  name         String
+  description  String
+  price        Float
+  duration     Int
+  appointments Appointment[]
+}
+
+model Client {
+  id           Int           @id @default(autoincrement())
+  name         String
+  email        String?       @unique
+  phone        String
+  password     String?
+  appointments Appointment[]
+}
+
+model Appointment {
+  id              Int               @id @default(autoincrement())
+  date            DateTime
+  endDate         DateTime
+  durationMinutes Int
+  status          AppointmentStatus @default(CONFIRMED)
+  guestName       String?
+  guestEmail      String?
+  guestPhone      String?
+  clientId        Int?
+  serviceId       Int
+  adminId         Int?
+  notes           String?
+  admin           Admin?            @relation(fields: [adminId], references: [id])
+  client          Client?           @relation(fields: [clientId], references: [id])
+  service         Service           @relation(fields: [serviceId], references: [id])
+}
+
+enum AppointmentStatus {
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
