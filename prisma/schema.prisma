@@ -1,9 +1,11 @@
-generator client {
-  provider = "prisma-client-js"
-}
-
 datasource db {
   provider = "postgresql"
+  // A linha 'url' foi removida daqui
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"] // Necessário para usar o adapter da Neon
 }
 
 model Admin {

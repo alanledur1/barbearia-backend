@@ -10,23 +10,29 @@ export class BillingController {
                 include: { service: true },
             });
 
-            if (!completedAppointments) {
+            if (!completedAppointments || completedAppointments.length === 0) {
                 return res.status(200).json({
                     totalRevenue: 0,
                     totalAppointments: 0,
                     averageTicket: 0,
-                    servicesBreakdown: [],
+                    servicesBreakdown: {},
                 });
             }
 
             // 2. Calcula as metricas
-            const totalRevenue = completedAppointments.reduce((sum, app) => sum + (app.service?.price || 0), 0);
+            // Corrigido: Tipagem explícita para 'sum' (number) e 'app' (tipo do retorno do Prisma)
+            const totalRevenue = completedAppointments.reduce((sum: number, app) => {
+                return sum + (app.service?.price || 0);
+            }, 0);
+
             const totalAppointments = completedAppointments.length;
             const averageTicket = totalAppointments > 0 ? totalRevenue / totalAppointments : 0;
 
             // 3. Agrupa os serviços para análise 
             const servicesBreakdown: { [key: string]: { count: number; revenue: number; } } = {};
-            completedAppointments.forEach(app => {
+            
+            // Corrigido: O TypeScript agora infere 'app' corretamente do array 'completedAppointments'
+            completedAppointments.forEach((app) => {
                 const serviceName = app.service?.name || 'Serviço Removido';
                 if (!servicesBreakdown[serviceName]) {
                     servicesBreakdown[serviceName] = { count: 0, revenue: 0 };
@@ -35,7 +41,7 @@ export class BillingController {
                 servicesBreakdown[serviceName].revenue += app.service?.price || 0;
             });
 
-            // 4 Retorna o objeto de resumo
+            // 4. Retorna o objeto de resumo
             return res.status(200).json({ 
                 totalRevenue,
                 totalAppointments,
@@ -43,8 +49,8 @@ export class BillingController {
                 servicesBreakdown,
             });
         } catch (error) {
-            console.error("Erro ao gerara resumo de faturamento:", error);
-            return res.status(500).json({ error: "Falha ao gerara resumo." });
+            console.error("Erro ao gerar resumo de faturamento:", error);
+            return res.status(500).json({ error: "Falha ao gerar resumo." });
         }
     }
 }
