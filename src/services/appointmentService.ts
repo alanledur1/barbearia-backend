@@ -3,7 +3,6 @@ import { CustomError } from '../utils/customErrors';
 import { prisma } from '../services/prisma.service';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-/* import { sendWhatsappMessage } from "../notifications/whatsapp.service"; */
 
 // Tipos
 type ClientData = { name: string; email: string; phone: string; };
@@ -181,32 +180,6 @@ export class AppointmentService {
                 include: { client: true, service: true, admin: true },
             });
         });
-
-
-        /*         // Bloco do WhatsApp (APENAS 1 VEZ)
-                try {
-                    const phone = appointment.guestPhone || appointment.client?.phone;
-        
-                    if (phone) {
-                        const formattedDate = format(
-                            new Date(appointment.date),
-                            "dd/MM/yyyy 'às' HH:mm",
-                            { locale: ptBR }
-                        );
-        
-                        const message = `✂️ Agendamento confirmado!
-        
-                        Serviço: ${appointment.service.name}
-                        Data: ${formattedDate}
-        
-                        Qualquer dúvida é só responder aqui 😉`;
-        
-                        await sendWhatsappMessage(phone, message);
-                    }
-                } catch (err) {
-                    console.error("Erro ao enviar WhatsApp:", err);
-                } */
-
         return appointment;
     }
 

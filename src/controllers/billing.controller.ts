@@ -21,18 +21,21 @@ export class BillingController {
 
             // 2. Calcula as metricas
             // Corrigido: Tipagem explícita para 'sum' (number) e 'app' (tipo do retorno do Prisma)
-            const totalRevenue = completedAppointments.reduce((sum: number, app) => {
-                return sum + (app.service?.price || 0);
-            }, 0);
+            const totalRevenue = completedAppointments.reduce(
+                (sum: number, app: any) => {
+                    return sum + (app.service?.price || 0);
+                },
+                0
+            );
 
             const totalAppointments = completedAppointments.length;
             const averageTicket = totalAppointments > 0 ? totalRevenue / totalAppointments : 0;
 
             // 3. Agrupa os serviços para análise 
             const servicesBreakdown: { [key: string]: { count: number; revenue: number; } } = {};
-            
+
             // Corrigido: O TypeScript agora infere 'app' corretamente do array 'completedAppointments'
-            completedAppointments.forEach((app) => {
+            completedAppointments.forEach((app: any) => {
                 const serviceName = app.service?.name || 'Serviço Removido';
                 if (!servicesBreakdown[serviceName]) {
                     servicesBreakdown[serviceName] = { count: 0, revenue: 0 };
@@ -42,7 +45,7 @@ export class BillingController {
             });
 
             // 4. Retorna o objeto de resumo
-            return res.status(200).json({ 
+            return res.status(200).json({
                 totalRevenue,
                 totalAppointments,
                 averageTicket,

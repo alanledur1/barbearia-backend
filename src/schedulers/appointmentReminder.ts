@@ -1,6 +1,5 @@
-import cron from 'node-cron';
+/*import cron from 'node-cron';
 import { prisma } from '../services/prisma.service';
-import { sendWhatsappMessage } from '../notifications/whatsapp.service';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -41,3 +40,4 @@ cron.schedule('0 9 * * *', async () => {
 
   console.log(`✅ ${appointments.length} lembretes enviados com sucesso!`);
 });
+*/
