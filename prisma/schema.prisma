@@ -1,12 +1,10 @@
 datasource db {
   provider = "postgresql"
-  // A linha 'url' foi removida daqui
 }
 
 generator client {
   provider = "prisma-client-js"
 }
-
 model Admin {
   id           Int           @id @default(autoincrement())
   email        String        @unique
