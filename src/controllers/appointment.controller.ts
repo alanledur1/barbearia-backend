@@ -84,7 +84,7 @@ export class AppointmentController {
             const { id } = req.params; // O ID virá da URL como string, ex: /appointments/123
 
             // --- CONVERSÃO DE ID PARA NUMBER AQUI ---
-            const appointmentId = parseInt(id, 10);
+            const appointmentId = parseInt(id as string, 10);
             if (isNaN(appointmentId)) {
                 return res.status(400).json({ error: 'Invalid appointment ID format.' });
             }
@@ -106,7 +106,7 @@ export class AppointmentController {
     async update(req: Request, res: Response) {
         try {
             const { id } = req.params;
-            const appointmentId = parseInt(id, 10);
+            const appointmentId = parseInt(id as string, 10);
 
             if (isNaN(appointmentId)) {
                 return res.status(400).json({ error: 'ID de agendamento inválido.' });
@@ -130,7 +130,7 @@ export class AppointmentController {
     async delete(req: Request, res: Response) {
         try {
             const { id } = req.params;
-            const appointmentId = parseInt(id, 10);
+            const appointmentId = parseInt(id as string, 10);
 
             if (isNaN(appointmentId)) {
                 return res.status(400).json({ error: 'ID de agendamento inválido.' });

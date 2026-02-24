@@ -44,7 +44,7 @@ export class ServiceController {
             const { id } = req.params; // o id vira da URL, ex.: services/123
 
             // Converte o id para um número
-            const serviceId = parseInt(id, 10);
+            const serviceId = parseInt(id as string, 10);
             if (isNaN(serviceId)) {
                 return res.status(400).json({ error: 'Invalid service ID format.' });
             }
@@ -66,7 +66,7 @@ export class ServiceController {
         try {
             const { id } = req.params;
 
-            const serviceId = parseInt(id, 10);
+            const serviceId = parseInt(id as string, 10);
             if (isNaN(serviceId)) {
                 return res.status(400).json({ error: 'Invalid service ID format.' });
             }
@@ -93,7 +93,7 @@ export class ServiceController {
         try {
             const { id } = req.params;
             
-            const serviceId = parseInt(id, 10);
+            const serviceId = parseInt(id as string, 10);
             if (isNaN(serviceId)) {
                 return res.status(400).json({ error: 'Invalid service ID format.' });
             }

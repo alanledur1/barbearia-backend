@@ -61,7 +61,7 @@ export class ClientController {
     async getById(req: Request, res: Response) {
         try {
             const { id } = req.params;
-            const clientId = parseInt(id, 10)
+            const clientId = parseInt(id as string, 10)
 
             if (!clientId) {
                 return res.status(400).json({ error: 'Invalid client ID format.' });
@@ -81,7 +81,7 @@ export class ClientController {
     async update(req: Request, res: Response) {
         try {
             const { id } = req.params; // Pega o ID da URL
-            const clientId = parseInt(id, 10)
+            const clientId = parseInt(id as string, 10)
 
             if (!clientId) {
                 return res.status(400).json({ error: 'Invalid client ID format.' });
@@ -108,7 +108,7 @@ export class ClientController {
     async delete(req: Request, res: Response) {
         try {
             const { id } = req.params; // Pega o ID da URL
-            const clientId = parseInt(id, 10)
+            const clientId = parseInt(id as string, 10)
             
             if (!clientId) {
                 return res.status(400).json({ error: 'Invalid client ID format.' });

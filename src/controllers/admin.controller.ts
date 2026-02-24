@@ -26,7 +26,7 @@ export class AdminController {
     async getById(req: Request, res: Response): Promise<Response> {
         try {
             const { id } = req.params;
-            const adminId = parseInt(id, 10);
+            const adminId = parseInt(id as string, 10);
 
             if (isNaN(adminId)) {
                 return res.status(400).json({ error: 'Invalid admin ID format.' });
@@ -50,7 +50,7 @@ export class AdminController {
     async update(req: Request, res: Response): Promise<Response> {
         try {
             const { id } = req.params;
-            const adminId = parseInt(id, 10);
+            const adminId = parseInt(id as string, 10);
 
             if (isNaN(adminId)) {
                 return res.status(400).json({ error: 'Invalid admin ID format.' });
@@ -89,7 +89,7 @@ export class AdminController {
     async delete(req: Request, res: Response): Promise<Response> {
         try {
             const { id } = req.params;
-            const adminId = parseInt(id, 10);
+            const adminId = parseInt(id as string, 10);
 
             if (isNaN(adminId)) {
                 return res.status(400).json({ error: 'Invalid admin ID format.' });
