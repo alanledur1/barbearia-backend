@@ -1,123 +1,97 @@
-# Barbearia Backend
+<div align="center">
 
-API backend para gerenciamento de barbearia (clientes, serviços, agendamentos e administradores).
+# Barbearia Shelby — Backend
 
-## Pré-requisitos
-- Node.js (v16+ recomendado)
-- npm
-- PostgreSQL
-- (Opcional) `npx` (vem com npm)
+API REST completa para gerenciamento de barbearia com autenticação, agendamentos, notificações automáticas e integração com WhatsApp.
 
-## Instalação
-No PowerShell, na raiz do projeto:
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org)
+[![Node.js](https://img.shields.io/badge/Node.js-Express-green?style=flat-square&logo=node.js)](https://nodejs.org)
+[![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?style=flat-square&logo=prisma)](https://www.prisma.io)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-banco%20de%20dados-336791?style=flat-square&logo=postgresql)](https://www.postgresql.org)
 
-```powershell
-# Instalar dependências
-npm install
+🖥️ **[Repositório do Frontend](https://github.com/alanledur1/barbearia-shelby-frontend)**
 
-# Gerar o client do prisma (caso necessário)
-npx prisma generate
-```
-
-## Variáveis de ambiente
-Crie um arquivo `.env` na raiz do projeto com as variáveis abaixo (exemplo):
-
-```powershell
-@"
-DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE_NAME"
-JWT_SECRET="uma_chave_secreta_super_segura"
-PORT=3001
-NODE_ENV=development
-"@" | Out-File -Encoding utf8 .env
-```
-
-Observações:
-- `DATABASE_URL` deve apontar para seu banco PostgreSQL.
-- `JWT_SECRET` é a chave usada para assinar tokens JWT. Mantenha-a secreta.
-- `PORT` é opcional; padrão é 3001.
-
-## Banco de dados (Prisma)
-Se for a primeira execução, crie e aplique migrations (desenvolvimento):
-
-```powershell
-# Cria e aplica migrations e gera cliente Prisma
-npx prisma migrate dev --name init
-npx prisma generate
-
-# Abre o Prisma Studio (UI para visualizar dados)
-npx prisma studio
-```
-
-## Scripts úteis
-- `npm run dev` — inicia o servidor em modo desenvolvimento (ts-node-dev)
-- `npm run build` — compila TypeScript para `dist`
-- `npm start` — executa `node dist/server.js` (após build)
-
-Exemplo (desenvolvimento):
-
-```powershell
-# Roda o servidor em modo dev
-npm run dev
-```
-
-## Endpoints principais
-As rotas estão expostas sob o prefixo `/api`:
-
-- Autenticação
-  - POST /api/auth/register — registrar administrador
-  - POST /api/auth/login — login administrador
-
-- Admins (protegido por JWT)
-  - GET /api/admins
-  - GET /api/admins/:id
-  - PUT /api/admins/:id
-  - DELETE /api/admins/:id
-
-- Clientes
-  - POST /api/clients/signup — criar cliente
-  - POST /api/clients/login — login cliente
-  - GET /api/clients
-  - GET /api/clients/:id
-  - PUT /api/clients/:id
-  - DELETE /api/clients/:id
-
-- Serviços
-  - GET /api/services
-  - POST /api/services
-  - GET /api/services/:id
-  - PUT /api/services/:id
-  - DELETE /api/services/:id
-
-- Agendamentos
-  - POST /api/appointments
-  - GET /api/appointments
-  - GET /api/appointments/:id
-
-## Exemplo rápido — Registrar cliente (curl)
-No PowerShell você pode usar `curl` ou `Invoke-RestMethod`.
-
-```powershell
-curl -X POST http://localhost:3001/api/clients/signup -H "Content-Type: application/json" -d '{"name":"João","email":"joao@example.com","phone":"11999999999","password":"minhaSenha"}'
-```
-
-## Observações de segurança e boas práticas
-- Nunca comite o arquivo `.env` no controle de versão.
-- `JWT_SECRET` deve ser forte e armazenado em um gerenciador de segredos em produção.
-- Há tanto `bcrypt` quanto `bcryptjs` nas dependências; é recomendável manter apenas uma para evitar confusão. `bcryptjs` é 100% JS e evita problemas de compilação nativa.
-- O middleware de erro já faz tratamento de Zod e JWT — verifique `src/middlewares/error.middleware.ts`.
-
-## Notas sobre desenvolvimento
-- Arquivos TypeScript compilados saem em `dist/` quando rodar `npm run build`.
-- Endpoints que retornam senhas nunca devem expor o campo `password` (o projeto já evita isso em muitos lugares).
-
-## Contribuindo
-Sinta-se à vontade para abrir PRs com melhorias. Para mudanças que afetem banco ou modelos, atualize as migrations do Prisma.
+</div>
 
 ---
 
-Se quiser, posso:
-- Remover a dependência duplicada (`bcrypt` ou `bcryptjs`) automaticamente.
-- Adicionar um script de exemplo para popular dados iniciais (seed).
-- Gerar um arquivo `.env.example` com as chaves esperadas.
+## 📋 Sobre o projeto
 
-Diga qual dessas tarefas quer que eu execute em seguida.
+Backend da plataforma **Barbearia Shelby**, responsável por toda a lógica de negócio da aplicação. A API gerencia clientes, administradores, serviços e agendamentos, além de automatizar notificações via WhatsApp e e-mail e gerar relatórios em PDF.
+
+---
+
+## ✨ Funcionalidades
+
+- 🔐 **Autenticação JWT** — Login e controle de acesso separado para clientes e administradores
+- 📅 **Gestão de agendamentos** — Criação, consulta e controle de horários
+- 👥 **Gestão de clientes** — Cadastro e gerenciamento de clientes
+- ✂️ **Gestão de serviços** — Cadastro e edição dos serviços oferecidos pela barbearia
+- 📄 **Geração de PDF** — Relatórios gerados automaticamente com Puppeteer
+- ⏰ **Tarefas agendadas** — Automações periódicas com node-cron
+- 🛡️ **Segurança** — Senhas criptografadas com bcrypt, headers protegidos com Helmet e CORS configurado
+
+### 🚧 Em desenvolvimento
+
+- 💬 **Notificações via WhatsApp** — Envio automático de confirmações e lembretes de agendamento
+- 📧 **Notificações via E-mail** — Envio de confirmações e comunicados
+
+---
+
+## 🚀 Tecnologias
+
+| Tecnologia | Uso |
+|---|---|
+| [Node.js](https://nodejs.org) + [Express 5](https://expressjs.com) | Servidor e roteamento da API |
+| [TypeScript](https://www.typescriptlang.org) | Tipagem estática em todo o projeto |
+| [Prisma ORM](https://www.prisma.io) | Acesso e modelagem do banco de dados |
+| [PostgreSQL](https://www.postgresql.org) | Banco de dados relacional |
+| [JWT](https://jwt.io) | Autenticação e autorização |
+| [bcrypt](https://github.com/kelektiv/node.bcrypt.js) | Hash seguro de senhas |
+| [Zod](https://zod.dev) | Validação de dados nas rotas |
+| [whatsapp-web.js](https://wwebjs.dev) | Integração com WhatsApp |
+| [Nodemailer](https://nodemailer.com) + [Resend](https://resend.com) | Envio de e-mails |
+| [Puppeteer](https://pptr.dev) | Geração de PDFs |
+| [node-cron](https://github.com/node-cron/node-cron) | Tarefas automáticas agendadas |
+| [date-fns](https://date-fns.org) | Manipulação de datas |
+| [Helmet](https://helmetjs.github.io) | Segurança de headers HTTP |
+
+---
+
+## 🗂️ Estrutura da API
+
+A API expõe rotas sob o prefixo `/api`, organizadas pelos seguintes módulos:
+
+| Módulo | Descrição |
+|---|---|
+| `/api/auth` | Autenticação de administradores |
+| `/api/clients` | Cadastro e login de clientes |
+| `/api/admins` | Gerenciamento de administradores (protegido) |
+| `/api/services` | Gerenciamento dos serviços da barbearia |
+| `/api/appointments` | Criação e consulta de agendamentos |
+
+---
+
+## 🔒 Segurança
+
+- Senhas armazenadas com hash via **bcrypt**
+- Rotas administrativas protegidas por **JWT**
+- Headers HTTP protegidos com **Helmet**
+- Validação de entrada com **Zod** em todas as rotas
+- Variáveis sensíveis isoladas em `.env` (nunca versionadas)
+
+---
+
+## 👨‍💻 Autores
+
+Desenvolvido por **Alan Ledur**
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Alan%20Ledur-blue?style=flat-square&logo=linkedin)](https://www.linkedin.com/in/alan-ledur/)
+[![GitHub](https://img.shields.io/badge/GitHub-alanledur1-black?style=flat-square&logo=github)](https://github.com/alanledur1)
+[![Portfolio](https://img.shields.io/badge/Portfolio-alan--ledur.vercel.app-green?style=flat-square)](https://alan-ledur.vercel.app)
+
+e **Carlos Henrique**
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Carlos%20Henrique-blue?style=flat-square&logo=linkedin)](https://www.linkedin.com/in/carlos-henrique-tem-pass-finger-892001196/)
+[![GitHub](https://img.shields.io/badge/GitHub-CarlosHTPF-black?style=flat-square&logo=github)](https://github.com/CarlosHTPF)
+[![Portfolio](https://img.shields.io/badge/Portfolio-portifolio--nine--lake--33.vercel.app-green?style=flat-square)](https://portifolio-nine-lake-33.vercel.app)
