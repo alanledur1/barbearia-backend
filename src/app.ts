@@ -16,6 +16,10 @@ app.use(cors());
 app.use(helmet());
 app.use(express.json());
 
+app.get("/healthz", (_req, res) => {
+  res.status(200).send("OK");
+});
+
 // Rota para autenticação
 app.use("/api/auth", authRoutes); // <--- Use authRoutes (com 'R' maiúsculo)
 
