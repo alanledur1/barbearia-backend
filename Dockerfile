@@ -8,7 +8,7 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates openssl python3 make g++ \
   && rm -rf /var/lib/apt/lists/*
 
-ARG PRISMA_GENERATE_DATABASE_URL="postgresql://user:password@localhost:5432/database"
+ARG PRISMA_GENERATE_DATABASE_URL="postgresql://neondb_owner:npg_dXSs2RgOvh5Y@ep-empty-forest-ad1tyitl-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 
 COPY package*.json ./
 COPY prisma ./prisma
