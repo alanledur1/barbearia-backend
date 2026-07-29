@@ -106,6 +106,10 @@ Definidas em `src/routes/`:
 ## Regras para o Claude Code
 
 - Nunca alterar o schema Prisma sem avisar explicitamente o usuário.
+- Toda migration nova deve seguir as regras de segurança em `DEPLOY_NORTHFLANK.md`
+  (secao "Regras de seguranca ao escrever uma migration"): padrão expand/contract, sem
+  `NOT NULL` direto em coluna nova sem default, sem rename direto, sem drop destrutivo sem
+  aviso e backup confirmado.
 - Nunca commitar arquivos `.env`.
 - Sempre rodar `npm run build` após mudanças, antes de testar.
 - Ao criar/alterar rotas de API, atualizar a seção "Rotas" acima.

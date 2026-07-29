@@ -11,6 +11,7 @@
     "build": "tsc",
     "start": "node dist/src/server.js",
     "migrate": "npx prisma migrate deploy",
+    "migrate:check": "npx prisma migrate diff --from-migrations ./prisma/migrations --to-schema-datamodel ./prisma/schema.prisma --exit-code",
     "start:migrate": "npm run migrate && npm start",
     "seed": "ts-node src/prisma/seed.ts",
     "deploy": "npm run migrate && npm run build"

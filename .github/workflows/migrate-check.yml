@@ -1,0 +1,50 @@
+name: Migration check
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'prisma/**'
+  push:
+    branches: [main]
+    paths:
+      - 'prisma/**'
+
+jobs:
+  migrate-check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: migrate_check
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/migrate_check
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - run: npm ci
+
+      - name: Validate schema.prisma
+        run: npx prisma validate
+
+      - name: Apply committed migrations to a throwaway database
+        run: npx prisma migrate deploy
+
+      - name: Fail if schema.prisma has changes not captured in a migration
+        run: npm run migrate:check
