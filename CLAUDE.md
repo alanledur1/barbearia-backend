@@ -1,147 +1,128 @@
-CLAUDE.md — Barbearia Shelby
+# CLAUDE.md — Barbearia Shelby (backend)
 
-Arquivo de contexto para o Claude Code. Lido automaticamente ao iniciar sessões no projeto.
+Arquivo de contexto para o Claude Code. Lido automaticamente ao iniciar sessões neste repositório.
 Atualize este arquivo conforme o projeto evolui.
 
+> Contexto geral do projeto (frontend + backend, deploy, convenções compartilhadas) está em
+> `CLAUDE.md` na pasta raiz `Barber project/` — não versionado aqui.
 
-Visão Geral
-Barbearia Shelby é um sistema de agendamento online para barbearia.
-O projeto é um monorepo com frontend em Next.js e backend em Node.js/TypeScript com Prisma.
+## Visão Geral
 
-Site: https://barbearia-shelby-frontend.vercel.app/
-Contato: (51) 99817-7919 | borgeselias876@gmail.com
-Endereço: Rua Esperanto, 203 – Quilombo
+API REST em Node.js/TypeScript para o sistema de agendamento da Barbearia Shelby, usando
+Express 5 e Prisma 7 sobre PostgreSQL.
 
+## Estrutura
 
-Estrutura do Monorepo
-Barber project/
-├── barbearia-backend/
-│   ├── src/              # Lógica da API (rotas, controllers, services)
-│   ├── prisma/           # Schema do banco e migrations
-│   ├── dist/             # Build TypeScript compilado
-│   ├── TASKS/            # Planejamento e especificações do projeto
-│   │   ├── plan/
-│   │   ├── spec/
-│   │   ├── taks/
-│   │   ├── plan-template.md
-│   │   ├── specs-template.md
-│   │   └── tasks-template.md
-│   ├── Dockerfile
-│   ├── docker-entrypoint.sh
-│   ├── DEPLOY_NORTHFLANK.md
-│   ├── prisma.config.ts
-│   ├── tsconfig.json
-│   └── package.json
-│
-└── barbearia-shelby-frontend/
-    ├── src/              # Componentes e páginas Next.js
-    ├── public/           # Assets estáticos (logo, vídeo, imagens)
-    ├── next.config.ts
-    ├── next-env.d.ts
-    ├── eslint.config.mjs
-    ├── tsconfig.json
-    └── package.json
+```
+barbearia-backend/
+├── src/
+│   ├── controllers/       # Handlers das rotas
+│   ├── routes/             # Definição das rotas Express
+│   ├── services/           # Regras de negócio
+│   ├── middlewares/        # Auth, validação, etc.
+│   ├── schemas/            # Validação com Zod
+│   ├── models/
+│   ├── notifications/      # E-mail (Resend/Nodemailer) e WhatsApp
+│   ├── schedulers/         # Jobs com node-cron
+│   ├── config/
+│   ├── prisma/
+│   └── server.ts
+├── prisma/                 # Schema do banco e migrations
+├── dist/                   # Build TypeScript compilado
+├── SDD/                    # Planejamento e especificações (spec-driven development)
+│   ├── PRD/
+│   ├── SPEC/
+│   ├── PLAN/
+│   ├── busca.md
+│   ├── implementar.md
+│   └── planejamento.md
+├── Dockerfile
+├── docker-entrypoint.sh
+├── DEPLOY_NORTHFLANK.md
+├── prisma.config.ts
+└── package.json
+```
 
-Stack Técnica
-CamadaTecnologiaFrontendNext.js + TypeScriptBackendNode.js + TypeScriptORMPrismaBanco<!-- TODO: PostgreSQL / SQLite / MySQL -->Deploy FEVercelDeploy BENorthflank (Docker)Estilo<!-- TODO: Tailwind / CSS Modules -->
+## Stack Técnica
 
-Comandos
-Backend
-bashcd barbearia-backend
+| Item        | Tecnologia                     |
+|-------------|----------------------------------|
+| Runtime     | Node.js ≥22 + TypeScript        |
+| Framework   | Express 5                       |
+| ORM         | Prisma 7 (`@prisma/adapter-pg`) |
+| Banco       | PostgreSQL                      |
+| Auth        | JWT (jsonwebtoken) + bcrypt     |
+| Validação   | Zod                             |
+| E-mail      | Resend / Nodemailer             |
+| WhatsApp    | whatsapp-web.js                 |
+| PDF/scraping| Puppeteer                       |
+| Deploy      | Docker → Northflank             |
 
-npm run dev              # Desenvolvimento
-npm run build            # Compilar TypeScript → dist/
+## Comandos
 
-npx prisma migrate dev   # Rodar migrations (dev)
-npx prisma migrate deploy # Rodar migrations (produção)
-npx prisma studio        # GUI do banco de dados
-npx prisma generate      # Regenerar o Prisma Client
-Frontend
-bashcd barbearia-shelby-frontend
+```bash
+npm run dev               # Desenvolvimento (ts-node-dev)
+npm run build              # Compilar TypeScript → dist/
+npm start                  # Rodar build compilado
+npm run seed                # Rodar seed do Prisma
 
-npm run dev              # Desenvolvimento (http://localhost:3000)
-npm run build            # Build de produção
-npm run lint             # Verificar linting
+npx prisma migrate dev     # Rodar migrations (dev)
+npx prisma migrate deploy  # Rodar migrations (produção)
+npx prisma studio          # GUI do banco de dados
+npx prisma generate        # Regenerar o Prisma Client
+```
 
-Variáveis de Ambiente
-Backend — .env
-DATABASE_URL="postgresql://carlos:280124@localhost:5432/barbearia"
-JWT_SECRET=sua_chave_secreta
-EMAIL_USER=seuemail@gmail.com
-EMAIL_PASS=sua_senha_de_aplicativo
+## Variáveis de Ambiente (`.env`)
+
+```
+DATABASE_URL=
+JWT_SECRET=
+EMAIL_USER=
+EMAIL_PASS=
 WHATSAPP_TOKEN=
 WHATSAPP_PHONE_ID=
 WHATSAPP_BUSINESS_ID=
+```
 
+## Rotas (API)
 
-Frontend — .env.local
-NEXT_PUBLIC_API_URL=http://localhost:3001
+Definidas em `src/routes/`:
 
-Páginas e Rotas
-Frontend (Next.js)
-RotaDescrição/Home com hero, sobre e contato/ServicosLista de serviços da barbearia/LoginLogin de usuário/CriarContaCadastro de usuário/agendamentoFluxo de agendamento
-Backend (API)
-# TODO: documentar rotas à medida que forem criadas
-# Exemplo:
-# POST /auth/login
-# POST /auth/register
-# GET  /servicos
-# POST /agendamentos
+- `auth.routes.ts` — login/registro
+- `admin.routes.ts` — endpoints administrativos
+- `client.routes.ts` — endpoints de cliente
+- `appointment.routes.ts` — agendamentos
+- `service.routes.ts` — serviços da barbearia
+- `whatsapp.routes.ts` — notificações via WhatsApp
 
-Serviços Cadastrados
+<!-- TODO: documentar path + método de cada endpoint conforme forem estabilizando -->
 
-Sobrancelha
-Corte e Barba
-Máquina e Barba
-Corte Máquina
-Barba
-Corte
-Barba e Sobrancelha
-Máquina + Barba
-Corte e Sobrancelha
+## Convenções
 
+- TypeScript estrito.
+- Commits: <!-- TODO: definir padrão -->
+- Branches: <!-- TODO: definir estratégia -->
 
-Convenções
+## Regras para o Claude Code
 
-Nomenclatura de páginas: PascalCase (/Login, /CriarConta, /Servicos)
-Linguagem: TypeScript estrito em ambos os pacotes
-Commits: <!-- TODO: definir padrão (ex: Conventional Commits pt-BR) -->
-Branches: <!-- TODO: definir estratégia (main / dev / feature/*) -->
+- Nunca alterar o schema Prisma sem avisar explicitamente o usuário.
+- Nunca commitar arquivos `.env`.
+- Sempre rodar `npm run build` após mudanças, antes de testar.
+- Ao criar/alterar rotas de API, atualizar a seção "Rotas" acima.
+- Manter os arquivos em `SDD/` atualizados com planos e especificações.
+- Mudanças que alteram o contrato da API (payload, rota, status code) afetam o frontend
+  (repositório separado) — sinalizar isso explicitamente ao usuário.
 
+## Deploy
 
-Regras para o Claude Code
+Via Docker no Northflank — ver `DEPLOY_NORTHFLANK.md` para instruções detalhadas.
 
-Nunca alterar o schema Prisma sem avisar explicitamente o usuário
-Nunca commitar arquivos .env ou .env.local
-Sempre rodar npm run build no backend após mudanças antes de testar
-Novas páginas no frontend seguem a convenção PascalCase
-O deploy do backend é via Docker/Northflank — consultar DEPLOY_NORTHFLANK.md
-Ao criar novas rotas de API, documentar neste arquivo na seção Backend
-Manter os arquivos em TASKS/ atualizados com planos e especificações
+## TODO / Próximos Passos
 
+- [ ] Documentar rotas da API (path + payload)
+- [ ] Definir padrão de commits
+- [ ] Definir estratégia de branches
+- [ ] Adicionar testes
 
-Deploy
-Frontend → Vercel
-
-Deploy automático via push na branch principal
-URL: https://barbearia-shelby-frontend.vercel.app/
-
-Backend → Northflank
-
-Deploy via Docker
-Consultar barbearia-backend/DEPLOY_NORTHFLANK.md para instruções detalhadas
-
-
-TODO / Próximos Passos
-
- Definir banco de dados e preencher DATABASE_URL
- Documentar rotas da API
- Definir padrão de commits
- Definir estratégia de branches
- Definir biblioteca de estilos do frontend
- Implementar autenticação (JWT)
- Implementar fluxo completo de agendamento
- Adicionar testes
-
-
-Última atualização: <!-- TODO: atualizar a data a cada revisão -->
+---
+Última atualização: 2026-07-28
