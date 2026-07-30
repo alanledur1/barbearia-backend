@@ -29,7 +29,6 @@ coverage/
 prisma/dev.db
 prisma/dev.sqlite
 prisma/test.db
-prisma/migrations/
 
 # Se usar SQLite no Prisma
 *.db

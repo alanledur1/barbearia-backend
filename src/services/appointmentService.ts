@@ -143,7 +143,7 @@ private validateBusinessHours(start: Date, durationMinutes: number) {
         // Lógica de Admin
         let assignedAdminId = adminId;
         if (!assignedAdminId) {
-            const defaultAdmin = await prisma.admin.findFirst();
+            const defaultAdmin = await prisma.user.findFirst({ where: { role: { not: 'CLIENTE' } } });
             if (!defaultAdmin) throw new CustomError('Nenhum profissional configurado.', 500);
             assignedAdminId = defaultAdmin.id;
         }
@@ -153,7 +153,7 @@ private validateBusinessHours(start: Date, durationMinutes: number) {
         if (clientId) {
             appointmentData.client = { connect: { id: clientId } };
         } else if (clientData?.phone) {
-            const existingClient = await prisma.client.findFirst({ where: { phone: clientData.phone } });
+            const existingClient = await prisma.user.findFirst({ where: { phone: clientData.phone, role: 'CLIENTE' } });
             if (existingClient) {
                 appointmentData.client = { connect: { id: existingClient.id } };
             } else {

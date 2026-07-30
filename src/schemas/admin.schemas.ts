@@ -3,8 +3,11 @@ import { z } from 'zod';
 
 export const createAdminSchema = z.object({
     body: z.object({
+        name: z.string().min(1, 'O nome é obrigatório.'),
         email: z.string().email('Email inválido.').min(1, 'O email é obrigatório.'),
         password: z.string().min(8, 'A senha deve ter no mínimo 8 caracteres.'),
+        phone: z.string().optional(),
+        role: z.enum(['BARBEIRO', 'DONO', 'ADMIN']),
     }),
 });
 

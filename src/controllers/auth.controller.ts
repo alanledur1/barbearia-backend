@@ -9,19 +9,19 @@ export class AuthController {
         this.authService = new AuthService(); // 2. Inicialize a instância do AuthService no construtor
     }
 
-    // 1. Método para Registrar um novo Admin
+    // 1. Método para Registrar um novo usuário de staff (barbeiro/dono/admin)
     async register(req: Request, res: Response) {
         try {
-            const { name, email, password, phone } = req.body;
+            const { name, email, password, phone, role } = req.body;
 
-            if (!name || !email || !password) {
-                return res.status(400).json({ error: 'Name, email, and password are required.' });
+            if (!name || !email || !password || !role) {
+                return res.status(400).json({ error: 'Name, email, password, and role are required.' });
             }
 
-            // Chama o serviço para registrar o admin usando 'this.authService'
-            const newAdmin = await this.authService.register({ name, email, password, phone });
+            // Chama o serviço para registrar o usuário usando 'this.authService'
+            const newUser = await this.authService.register({ name, email, password, phone, role });
 
-            return res.status(201).json(newAdmin);
+            return res.status(201).json(newUser);
         } catch (error: any) {
             if (error.name === 'ZodError') {
                 return res.status(400).json({ errors: error.issues });
@@ -39,10 +39,10 @@ export class AuthController {
                 return res.status(400).json({ error: 'Email and password are required.' });
             }
 
-            // Chama o serviço para autenticar o admin e obter o token usando 'this.authService'
-            const { token, admin } = await this.authService.login(email, password);
+            // Chama o serviço para autenticar o usuário e obter o token usando 'this.authService'
+            const { token, user } = await this.authService.login(email, password);
 
-            return res.status(200).json({ token, admin });
+            return res.status(200).json({ token, user });
         } catch (error: any) {
             if (error.name === 'ZodError') {
                 return res.status(400).json({ errors: error.issues });

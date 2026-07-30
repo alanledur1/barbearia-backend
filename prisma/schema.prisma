@@ -5,15 +5,25 @@ datasource db {
 generator client {
   provider = "prisma-client-js"
 }
-model Admin {
-  id           Int           @id @default(autoincrement())
-  email        String        @unique
-  password     String
-  name         String        @default("Admin")
-  phone        String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  appointments Appointment[]
+enum UserRole {
+  CLIENTE
+  BARBEIRO
+  DONO
+  ADMIN
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String?  @unique
+  phone     String?
+  password  String
+  role      UserRole @default(CLIENTE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  appointmentsAsClient Appointment[] @relation("AppointmentClient")
+  appointmentsAsStaff  Appointment[] @relation("AppointmentStaff")
 }
 
 model Service {
@@ -22,15 +32,6 @@ model Service {
   description  String
   price        Float
   duration     Int
-  appointments Appointment[]
-}
-
-model Client {
-  id           Int           @id @default(autoincrement())
-  name         String
-  email        String?       @unique
-  phone        String
-  password     String?
   appointments Appointment[]
 }
 
@@ -47,8 +48,8 @@ model Appointment {
   serviceId       Int
   adminId         Int?
   notes           String?
-  admin           Admin?            @relation(fields: [adminId], references: [id])
-  client          Client?           @relation(fields: [clientId], references: [id])
+  admin           User?             @relation("AppointmentStaff", fields: [adminId], references: [id])
+  client          User?             @relation("AppointmentClient", fields: [clientId], references: [id])
   service         Service           @relation(fields: [serviceId], references: [id])
 }
 
@@ -56,4 +57,12 @@ enum AppointmentStatus {
   CONFIRMED
   CANCELLED
   COMPLETED
+}
+
+model Otp {
+  id        Int      @id @default(autoincrement())
+  email     String
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }

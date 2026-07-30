@@ -1,22 +1,19 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-
+import { verifyUserToken } from '../utils/jwt';
 
 // Estende a interface Request do Express para incluir a propriedade 'user'
 declare global {
     namespace Express {
         interface Request {
             user?: {
-                admin: string; 
-                email: string;
-                // Adicione outras propriedades do payload do JWT se necessário
+                id: number;
+                role: string;
+                email: string | null;
             };
         }
     }
 }
-
-// Jwt secret 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-jwt-secret';
 
 const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
 
@@ -35,12 +32,13 @@ const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
     }
 
     try {
-        // 2. Verifica a validade do token usando jwt.verify()
-        const decoded = jwt.verify(token, JWT_SECRET) as { adminId: string, email: string; [key: string]: any };
+        // 2. Verifica a validade do token e decodifica o payload
+        const decoded = verifyUserToken(token);
 
-        // 3/ Decodifica o payload e anexa as informações do usuário ao objeto req
-        req.user = { 
-            admin: decoded.adminId,
+        // 3. Anexa as informações do usuário ao objeto req
+        req.user = {
+            id: decoded.userId,
+            role: decoded.role,
             email: decoded.email,
         };
 

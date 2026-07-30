@@ -58,8 +58,8 @@ export class AdminController {
 
             // Você pode usar um schema Zod aqui para validar os dados do corpo da requisição
             // const validatedData = adminSchema.partial().parse(req.body);
-            // const dataToUpdate: Prisma.AdminUpdateInput = validatedData;
-            const dataToUpdate: Prisma.AdminUpdateInput = req.body; // Apenas para exemplo sem Zod
+            // const dataToUpdate: Prisma.UserUpdateInput = validatedData;
+            const dataToUpdate: Prisma.UserUpdateInput = req.body; // Apenas para exemplo sem Zod
 
             // **IMPORTANTE**: Não permita a atualização direta da senha por aqui sem hashing.
             // Se 'password' estiver em dataToUpdate, remova ou trate-o.

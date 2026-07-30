@@ -6,6 +6,8 @@ import authRoutes from './auth.routes';
 import adminRoutes from './admin.routes';
 import { UnifiedLoginController } from '../controllers/unifiedLogin.controller';
 import { BillingController } from '../controllers/billing.controller';
+import authMiddleware from '../middlewares/auth.middleware';
+import requireRole from '../middlewares/requireRole.middleware';
 /* import adminRoutes from './admin.routes'; */
 
 const router = Router();
@@ -18,6 +20,6 @@ router.use('/services', serviceRoutes);
 router.use('/appointments', appointmentRoutes);
 router.use('/auth', authRoutes);
 router.use('/admin', adminRoutes);
-router.get('/billing/summary', billingController.getSummary);
+router.get('/billing/summary', authMiddleware, requireRole('BARBEIRO', 'DONO', 'ADMIN'), billingController.getSummary);
 
 export default router;

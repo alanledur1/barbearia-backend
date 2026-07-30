@@ -63,12 +63,17 @@ export class AppointmentController {
             // Extrai os possíveis filtros da query string da URL
             const { date, clientId } = req.query;
 
+            // Cliente só pode listar os próprios agendamentos, independente da query recebida
+            const effectiveClientId = req.user?.role === 'CLIENTE'
+                ? req.user.id
+                : (clientId ? Number(clientId) : undefined);
+
             const appointmentService = new AppointmentService();
 
             // Passa os filtros para a camada de serviço
             const appointments = await appointmentService.listAll({
                 date: date as string | undefined,
-                clientId: clientId ? Number(clientId) : undefined
+                clientId: effectiveClientId
             });
 
             return res.status(200).json(appointments);
@@ -97,6 +102,10 @@ export class AppointmentController {
                 return res.status(404).json({ error: 'Appointment not found.' });
             }
 
+            if (req.user?.role === 'CLIENTE' && appointment.clientId !== req.user.id) {
+                return res.status(403).json({ error: 'Acesso não permitido a este recurso.' });
+            }
+
             return res.status(200).json(appointment);
         } catch (err: any) {
             return res.status(400).json({ error: err.message });
@@ -115,6 +124,20 @@ export class AppointmentController {
             const dataToUpdate = req.body;
 
             const appointmentService = new AppointmentService();
+
+            if (req.user?.role === 'CLIENTE') {
+                const existing = await appointmentService.findById(appointmentId);
+                if (!existing) {
+                    return res.status(404).json({ error: 'Appointment not found.' });
+                }
+                if (existing.clientId !== req.user.id) {
+                    return res.status(403).json({ error: 'Acesso não permitido a este recurso.' });
+                }
+                if (dataToUpdate.status && dataToUpdate.status !== 'CANCELLED') {
+                    return res.status(403).json({ error: 'Cliente só pode cancelar o próprio agendamento.' });
+                }
+            }
+
             const updatedAppointment = await appointmentService.update(appointmentId, dataToUpdate);
 
             return res.status(200).json(updatedAppointment);

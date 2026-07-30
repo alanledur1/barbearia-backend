@@ -1,5 +1,7 @@
 import { Router } from "express";
 import { ClientController } from "../controllers/clientController";
+import authMiddleware from "../middlewares/auth.middleware";
+import requireRole from "../middlewares/requireRole.middleware";
 
 const router = Router();
 const clientController = new ClientController();
@@ -20,10 +22,12 @@ router.post("/signup", (req, res) => clientController.register(req, res));
 // Rota para login de cliente
 router.post("/login", (req, res) => clientController.login(req, res));
 
-
-router.get("/", clientController.listAll);
-router.get("/:id", clientController.getById);
-router.put("/:id", clientController.update);
-router.delete("/:id", clientController.delete);
+// Listar todos os clientes: só dono/admin
+router.get("/", authMiddleware, requireRole('DONO', 'ADMIN'), clientController.listAll);
+// Ver/editar um cliente: o próprio cliente ou dono/admin (checado no controller)
+router.get("/:id", authMiddleware, clientController.getById);
+router.put("/:id", authMiddleware, clientController.update);
+// Deletar cliente: só dono/admin
+router.delete("/:id", authMiddleware, requireRole('DONO', 'ADMIN'), clientController.delete);
 
 export default router;

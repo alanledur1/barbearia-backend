@@ -67,6 +67,10 @@ export class ClientController {
                 return res.status(400).json({ error: 'Invalid client ID format.' });
             }
 
+            if (req.user?.role === 'CLIENTE' && req.user.id !== clientId) {
+                return res.status(403).json({ error: 'Acesso não permitido a este recurso.' });
+            }
+
             const clientService = new ClientService();
             const client = await clientService.getById(clientId);
             if (!client) {
@@ -85,6 +89,10 @@ export class ClientController {
 
             if (!clientId) {
                 return res.status(400).json({ error: 'Invalid client ID format.' });
+            }
+
+            if (req.user?.role === 'CLIENTE' && req.user.id !== clientId) {
+                return res.status(403).json({ error: 'Acesso não permitido a este recurso.' });
             }
 
             const dataToUpdate = clientSchema.partial().parse(req.body);
