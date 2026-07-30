@@ -57,6 +57,41 @@ export class AppointmentController {
         }
     }
 
+    // Lista os barbeiros selecionáveis no fluxo de agendamento (rota pública)
+    async listBarbers(req: Request, res: Response) {
+        try {
+            const appointmentService = new AppointmentService();
+            const barbers = await appointmentService.listBookableBarbers();
+            return res.status(200).json(barbers);
+        } catch (err: any) {
+            console.error("Error listing barbers:", err);
+            return res.status(500).json({ error: 'Failed to retrieve barbers.' });
+        }
+    }
+
+    // Horários ocupados de um barbeiro numa data (rota pública, sem dados de cliente)
+    async getAvailability(req: Request, res: Response) {
+        try {
+            const { date, adminId } = req.query;
+
+            if (!date || !adminId) {
+                return res.status(400).json({ error: 'date e adminId são obrigatórios.' });
+            }
+
+            const adminIntId = parseInt(adminId as string, 10);
+            if (isNaN(adminIntId)) {
+                return res.status(400).json({ error: 'adminId inválido.' });
+            }
+
+            const appointmentService = new AppointmentService();
+            const availability = await appointmentService.getAvailabilityByBarber(adminIntId, date as string);
+            return res.status(200).json(availability);
+        } catch (err: any) {
+            console.error("Error getting availability:", err);
+            return res.status(500).json({ error: 'Failed to retrieve availability.' });
+        }
+    }
+
     // Método para listar todos os agendamentos
     async listAll(req: Request, res: Response) {
         try {

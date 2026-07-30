@@ -48,10 +48,11 @@ private validateBusinessHours(start: Date, durationMinutes: number) {
             throw new CustomError(`Agendamentos permitidos até as ${businessCloseHour}:00.`, 400);
         }
     }
-    // Função de check correta (apenas 2 parâmetros de data)
+    // Checa sobreposição de horário para um barbeiro (adminId) específico.
     async checkAvailability(
         startDateTime: Date,
         endDateTime: Date,
+        adminId?: number | null,
         excludeAppointmentId?: number
     ): Promise<boolean> {
 
@@ -59,6 +60,7 @@ private validateBusinessHours(start: Date, durationMinutes: number) {
             where: {
                 id: excludeAppointmentId ? { not: excludeAppointmentId } : undefined,
                 status: 'CONFIRMED',
+                ...(adminId ? { adminId } : {}),
                 AND: [
                     { date: { lt: endDateTime } },
                     { endDate: { gt: startDateTime } }
@@ -67,6 +69,34 @@ private validateBusinessHours(start: Date, durationMinutes: number) {
         });
 
         return overlappingCount === 0;
+    }
+
+    // Lista os barbeiros (role BARBEIRO) selecionáveis no fluxo de agendamento.
+    async listBookableBarbers() {
+        return await prisma.user.findMany({
+            where: { role: 'BARBEIRO' },
+            select: { id: true, name: true },
+            orderBy: { name: 'asc' },
+        });
+    }
+
+    // Horários já ocupados (CONFIRMED) de um barbeiro numa data específica.
+    // Não retorna nenhum dado de cliente (endpoint público).
+    async getAvailabilityByBarber(adminId: number, date: string) {
+        const startDate = new Date(date);
+        startDate.setUTCHours(0, 0, 0, 0);
+        const endDate = new Date(startDate);
+        endDate.setUTCDate(startDate.getUTCDate() + 1);
+
+        return await prisma.appointment.findMany({
+            where: {
+                adminId,
+                status: 'CONFIRMED',
+                date: { gte: startDate, lt: endDate },
+            },
+            select: { date: true, durationMinutes: true },
+            orderBy: { date: 'asc' },
+        });
     }
 
 
@@ -127,8 +157,23 @@ private validateBusinessHours(start: Date, durationMinutes: number) {
 
         this.validateBusinessHours(requestedDateTime, service.duration);
 
-        // Chama o checkAvailability da forma correta
-        const isAvailable = await this.checkAvailability(requestedDateTime, endDateTime);
+        // Lógica de Admin — resolvida ANTES da checagem de disponibilidade,
+        // para que a checagem seja sempre filtrada pelo barbeiro correto.
+        let assignedAdminId = adminId;
+        if (assignedAdminId) {
+            const chosenProfessional = await prisma.user.findUnique({ where: { id: assignedAdminId } });
+            if (!chosenProfessional || chosenProfessional.role === 'CLIENTE') {
+                throw new CustomError('Profissional selecionado inválido.', 400);
+            }
+        } else {
+            const defaultBarber = await prisma.user.findFirst({ where: { role: 'BARBEIRO' } });
+            const defaultAdmin = defaultBarber ?? await prisma.user.findFirst({ where: { role: { not: 'CLIENTE' } } });
+            if (!defaultAdmin) throw new CustomError('Nenhum profissional configurado.', 500);
+            assignedAdminId = defaultAdmin.id;
+        }
+
+        // Chama o checkAvailability já filtrando pelo barbeiro escolhido
+        const isAvailable = await this.checkAvailability(requestedDateTime, endDateTime, assignedAdminId);
         if (!isAvailable) throw new CustomError('Horário selecionado não está disponível.', 409);
 
         const appointmentData: Prisma.AppointmentCreateInput = {
@@ -138,16 +183,8 @@ private validateBusinessHours(start: Date, durationMinutes: number) {
             status: 'CONFIRMED',
             notes,
             service: { connect: { id: serviceId } },
+            admin: { connect: { id: assignedAdminId } },
         };
-
-        // Lógica de Admin
-        let assignedAdminId = adminId;
-        if (!assignedAdminId) {
-            const defaultAdmin = await prisma.user.findFirst({ where: { role: { not: 'CLIENTE' } } });
-            if (!defaultAdmin) throw new CustomError('Nenhum profissional configurado.', 500);
-            assignedAdminId = defaultAdmin.id;
-        }
-        appointmentData.admin = { connect: { id: assignedAdminId } };
 
         // Lógica de Cliente
         if (clientId) {
@@ -169,6 +206,7 @@ private validateBusinessHours(start: Date, durationMinutes: number) {
             const overlapping = await tx.appointment.count({
                 where: {
                     status: 'CONFIRMED',
+                    adminId: assignedAdminId,
                     AND: [
                         { date: { lt: endDateTime } },
                         { endDate: { gt: requestedDateTime } }
@@ -214,8 +252,8 @@ private validateBusinessHours(start: Date, durationMinutes: number) {
 
             this.validateBusinessHours(newStartDate, newDuration);
 
-            // Chamada correta (com ID para excluir ele mesmo da verificação)
-            const isAvailable = await this.checkAvailability(newStartDate, newEndDate, id);
+            // Filtra pelo barbeiro do agendamento existente, excluindo-o da verificação
+            const isAvailable = await this.checkAvailability(newStartDate, newEndDate, existing.adminId, id);
             if (!isAvailable) {
                 throw new CustomError('Horário selecionado não está disponível para reagendamento.', 409);
             }
