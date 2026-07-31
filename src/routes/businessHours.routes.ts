@@ -6,7 +6,7 @@ import requireRole from '../middlewares/requireRole.middleware';
 const router = Router();
 const controller = new BusinessHoursController();
 
-router.get('/', authMiddleware, requireRole('DONO'), controller.listAll);
-router.put('/', authMiddleware, requireRole('DONO'), controller.updateBulk);
+router.get('/', authMiddleware, requireRole('DONO', 'ADMIN'), controller.listAll);
+router.put('/', authMiddleware, requireRole('DONO', 'ADMIN'), controller.updateBulk);
 
 export default router;

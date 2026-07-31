@@ -6,8 +6,8 @@ import requireRole from '../middlewares/requireRole.middleware';
 const router = Router();
 const controller = new HolidayController();
 
-router.get('/', authMiddleware, requireRole('DONO'), controller.listAll);
-router.post('/', authMiddleware, requireRole('DONO'), controller.create);
-router.delete('/:id', authMiddleware, requireRole('DONO'), controller.delete);
+router.get('/', authMiddleware, requireRole('DONO', 'ADMIN'), controller.listAll);
+router.post('/', authMiddleware, requireRole('DONO', 'ADMIN'), controller.create);
+router.delete('/:id', authMiddleware, requireRole('DONO', 'ADMIN'), controller.delete);
 
 export default router;
