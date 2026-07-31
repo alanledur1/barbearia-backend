@@ -27,5 +27,6 @@ router.use('/business-hours', businessHoursRoutes);
 router.use('/holidays', holidayRoutes);
 router.use('/users', userRoutes);
 router.get('/billing/summary', authMiddleware, requireRole('BARBEIRO', 'DONO', 'ADMIN'), billingController.getSummary);
+router.get('/billing/summary/by-barber', authMiddleware, requireRole('DONO', 'ADMIN'), billingController.getSummaryByBarber);
 
 export default router;
