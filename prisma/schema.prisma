@@ -66,3 +66,19 @@ model Otp {
   expiresAt DateTime
   createdAt DateTime @default(now())
 }
+
+model BusinessHours {
+  id        Int      @id @default(autoincrement())
+  dayOfWeek Int      @unique
+  openTime  String
+  closeTime String
+  isClosed  Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+}
+
+model Holiday {
+  id        Int      @id @default(autoincrement())
+  date      DateTime @unique @db.Date
+  reason    String?
+  createdAt DateTime @default(now())
+}

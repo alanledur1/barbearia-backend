@@ -4,6 +4,11 @@ import { prisma } from '../services/prisma.service';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+function parseTimeToMinutes(time: string): number {
+    const [h, m] = time.split(':').map(Number);
+    return h * 60 + m;
+}
+
 // Tipos
 type ClientData = { name: string; email: string; phone: string; };
 type CreateAppointmentPayload = {
@@ -28,24 +33,51 @@ type UpdateAppointmentData = {
 
 export class AppointmentService {
 
-private validateBusinessHours(start: Date, durationMinutes: number) {
-        const businessOpenHour = 9;
-        const businessCloseHour = 20;
+    // Consulta o horário de funcionamento configurado (BusinessHours) para o dia da semana
+    // (em BRT) do agendamento, e valida se o intervalo [start, start+duration] cabe nele.
+    // Se não houver linha configurada para o dia (não deveria acontecer após o seed),
+    // usa o fallback histórico (9h-20h) para não travar agendamentos.
+    private async validateBusinessHours(start: Date, durationMinutes: number) {
         const endDate = new Date(start.getTime() + durationMinutes * 60 * 1000);
 
-        // Subtrai 3 horas do horário UTC para obter o horário correto de Brasília (UTC-3)
-        // O módulo 24 garante que, ao passar da meia-noite, a hora continue correta
-        const startHourBRT = (start.getUTCHours() - 3 + 24) % 24;
-        const endHourBRT = (endDate.getUTCHours() - 3 + 24) % 24;
-        const endMinutesBRT = endDate.getUTCMinutes(); // Os minutos não mudam com o fuso
+        // Subtrai 3 horas do horário UTC para obter o horário/dia correto de Brasília (UTC-3)
+        const BRT_OFFSET_MS = 3 * 60 * 60 * 1000;
+        const startBRT = new Date(start.getTime() - BRT_OFFSET_MS);
+        const endBRT = new Date(endDate.getTime() - BRT_OFFSET_MS);
 
-        if (startHourBRT < businessOpenHour) {
-            throw new CustomError(`Agendamentos permitidos apenas a partir das ${businessOpenHour}:00.`, 400);
+        const dayOfWeek = startBRT.getUTCDay();
+        const startMinutes = startBRT.getUTCHours() * 60 + startBRT.getUTCMinutes();
+        const endMinutes = endBRT.getUTCHours() * 60 + endBRT.getUTCMinutes();
+
+        const businessHours = await prisma.businessHours.findUnique({ where: { dayOfWeek } });
+
+        const openTime = businessHours?.openTime ?? '09:00';
+        const closeTime = businessHours?.closeTime ?? '20:00';
+        const isClosed = businessHours?.isClosed ?? false;
+
+        if (isClosed) {
+            throw new CustomError('A barbearia não funciona neste dia da semana.', 400);
         }
 
-        if (endHourBRT > businessCloseHour ||
-            (endHourBRT === businessCloseHour && endMinutesBRT > 0)) {
-            throw new CustomError(`Agendamentos permitidos até as ${businessCloseHour}:00.`, 400);
+        if (startMinutes < parseTimeToMinutes(openTime)) {
+            throw new CustomError(`Agendamentos permitidos apenas a partir das ${openTime}.`, 400);
+        }
+
+        if (endMinutes > parseTimeToMinutes(closeTime)) {
+            throw new CustomError(`Agendamentos permitidos até as ${closeTime}.`, 400);
+        }
+    }
+
+    // Bloqueia agendamento em datas cadastradas como feriado (Holiday), comparando
+    // apenas o dia (em BRT), sem componente de hora.
+    private async validateNotHoliday(start: Date) {
+        const BRT_OFFSET_MS = 3 * 60 * 60 * 1000;
+        const startBRT = new Date(start.getTime() - BRT_OFFSET_MS);
+        const dateOnly = new Date(Date.UTC(startBRT.getUTCFullYear(), startBRT.getUTCMonth(), startBRT.getUTCDate()));
+
+        const holiday = await prisma.holiday.findUnique({ where: { date: dateOnly } });
+        if (holiday) {
+            throw new CustomError('A barbearia está fechada nesta data (feriado).', 400);
         }
     }
     // Checa sobreposição de horário para um barbeiro (adminId) específico.
@@ -155,7 +187,8 @@ private validateBusinessHours(start: Date, durationMinutes: number) {
         // Calcula o endDate
         const endDateTime = new Date(requestedDateTime.getTime() + service.duration * 60 * 1000);
 
-        this.validateBusinessHours(requestedDateTime, service.duration);
+        await this.validateBusinessHours(requestedDateTime, service.duration);
+        await this.validateNotHoliday(requestedDateTime);
 
         // Lógica de Admin — resolvida ANTES da checagem de disponibilidade,
         // para que a checagem seja sempre filtrada pelo barbeiro correto.
@@ -250,7 +283,8 @@ private validateBusinessHours(start: Date, durationMinutes: number) {
 
             const newEndDate = new Date(newStartDate.getTime() + newDuration * 60 * 1000);
 
-            this.validateBusinessHours(newStartDate, newDuration);
+            await this.validateBusinessHours(newStartDate, newDuration);
+            await this.validateNotHoliday(newStartDate);
 
             // Filtra pelo barbeiro do agendamento existente, excluindo-o da verificação
             const isAvailable = await this.checkAvailability(newStartDate, newEndDate, existing.adminId, id);

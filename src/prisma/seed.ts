@@ -42,6 +42,16 @@ async function main() {
 
   console.log("✅ Usuários criados com sucesso:");
   console.log({ dono, admin, barbeiro });
+
+  const weekdays = [0, 1, 2, 3, 4, 5, 6];
+  for (const dayOfWeek of weekdays) {
+    await prisma.businessHours.upsert({
+      where: { dayOfWeek },
+      update: {},
+      create: { dayOfWeek, openTime: "09:00", closeTime: "20:00", isClosed: false },
+    });
+  }
+  console.log("✅ Horário de funcionamento padrão (9h-20h, todo dia) garantido.");
 }
 
 main()
