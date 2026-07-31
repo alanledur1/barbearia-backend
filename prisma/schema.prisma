@@ -19,6 +19,7 @@ model User {
   phone     String?
   password  String
   role      UserRole @default(CLIENTE)
+  active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

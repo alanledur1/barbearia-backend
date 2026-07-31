@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma.service";
 import { signUserToken } from "../utils/jwt";
+import { CustomError } from "../utils/customErrors";
 
 type RegisterStaffData = {
     name: string;
@@ -59,6 +60,7 @@ export class AuthService {
                     email: true,
                     password: true,
                     role: true,
+                    active: true,
                 }
             });
 
@@ -70,6 +72,12 @@ export class AuthService {
 
             if (!isPasswordValid) {
                 throw new Error("Invalid credentials.");
+            }
+
+            // Checagem feita depois da validação de senha, para não revelar o status
+            // da conta a quem não sabe a senha.
+            if (!user.active) {
+                throw new CustomError('Esta conta foi desativada. Entre em contato com o administrador.', 401);
             }
 
             const token = signUserToken({ userId: user.id, role: user.role, email: user.email }, "8h");
