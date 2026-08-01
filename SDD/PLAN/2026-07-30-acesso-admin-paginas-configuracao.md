@@ -62,11 +62,11 @@ transversal do roadmap seguem acessíveis sem mudança.
 ## Phase 1: Backend — abrir guards de rota para ADMIN
 
 ### Tasks
-- [ ] Em `barbearia-backend/src/routes/businessHours.routes.ts`, trocar as duas ocorrências de
+- [x] Em `barbearia-backend/src/routes/businessHours.routes.ts`, trocar as duas ocorrências de
       `requireRole('DONO')` por `requireRole('DONO', 'ADMIN')` (linhas 9 e 10).
-- [ ] Em `barbearia-backend/src/routes/holiday.routes.ts`, trocar as três ocorrências de
+- [x] Em `barbearia-backend/src/routes/holiday.routes.ts`, trocar as três ocorrências de
       `requireRole('DONO')` por `requireRole('DONO', 'ADMIN')` (linhas 9, 10 e 11).
-- [ ] Em `barbearia-backend/src/routes/user.routes.ts`, trocar as quatro ocorrências de
+- [x] Em `barbearia-backend/src/routes/user.routes.ts`, trocar as quatro ocorrências de
       `requireRole('DONO')` por `requireRole('DONO', 'ADMIN')` (linhas 11-14), e atualizar o
       comentário da linha 9 que hoje diz "restrito ao papel DONO" para refletir que `DONO` e
       `ADMIN` têm acesso (a regra de negócio do próprio CRUD — quais papéis podem ser
@@ -74,45 +74,45 @@ transversal do roadmap seguem acessíveis sem mudança.
 
 ### Success Criteria
 #### Automated Verification
-- [ ] `cd barbearia-backend && npm run build` — compila sem erro.
-- [ ] `grep -n "requireRole('DONO')" src/routes/businessHours.routes.ts src/routes/holiday.routes.ts src/routes/user.routes.ts` não retorna nenhuma linha (todas viraram `'DONO', 'ADMIN'`).
+- [x] `cd barbearia-backend && npm run build` — compila sem erro.
+- [x] `grep -n "requireRole('DONO')" src/routes/businessHours.routes.ts src/routes/holiday.routes.ts src/routes/user.routes.ts` não retorna nenhuma linha (todas viraram `'DONO', 'ADMIN'`).
 
 #### Manual Verification
-- [ ] Com um token de `ADMIN` válido, `GET /api/business-hours`, `GET /api/holidays` e
+- [x] Com um token de `ADMIN` válido, `GET /api/business-hours`, `GET /api/holidays` e
       `GET /api/users` retornam 200 (antes retornavam 403).
-- [ ] Com um token de `BARBEIRO` ou `CLIENTE`, as mesmas rotas continuam retornando 403.
-- [ ] Com um token de `DONO`, as mesmas rotas continuam retornando 200 (sem regressão).
+- [x] Com um token de `BARBEIRO` ou `CLIENTE`, as mesmas rotas continuam retornando 403.
+- [x] Com um token de `DONO`, as mesmas rotas continuam retornando 200 (sem regressão).
 
 ---
 
 ## Phase 2: Frontend — abrir guards de página e links de navegação para admin
 
 ### Tasks
-- [ ] Em `barbearia-shelby-frontend/src/app/barber/configuracoes/layout.tsx`, trocar
+- [x] Em `barbearia-shelby-frontend/src/app/barber/configuracoes/layout.tsx`, trocar
       `allowedUserType={['dono']}` por `allowedUserType={['dono', 'admin']}`.
-- [ ] Em `barbearia-shelby-frontend/src/app/barber/usuarios/layout.tsx`, trocar
+- [x] Em `barbearia-shelby-frontend/src/app/barber/usuarios/layout.tsx`, trocar
       `allowedUserType={['dono']}` por `allowedUserType={['dono', 'admin']}`.
-- [ ] Em `barbearia-shelby-frontend/src/app/barber/components/BarberDashboard/BarberHeader.tsx`,
+- [x] Em `barbearia-shelby-frontend/src/app/barber/components/BarberDashboard/BarberHeader.tsx`,
       trocar as duas condições `auth.user?.userType === 'dono'` (linhas 51 e 56, links
       "Configurações" e "Usuários") por uma checagem que aceite `'dono'` ou `'admin'`
       (ex.: `(auth.user?.userType === 'dono' || auth.user?.userType === 'admin')`).
 
 ### Success Criteria
 #### Automated Verification
-- [ ] `cd barbearia-shelby-frontend && npm run build` — compila sem erro.
-- [ ] `cd barbearia-shelby-frontend && npx eslint src` — sem erros novos (lint padrão do projeto,
+- [x] `cd barbearia-shelby-frontend && npm run build` — compila sem erro.
+- [x] `cd barbearia-shelby-frontend && npx eslint src` — sem erros novos (lint padrão do projeto,
       já que `npm run lint` está quebrado no Next 16 — ver `CLAUDE.md`).
 
 #### Manual Verification
-- [ ] Login como `admin` no navegador: `/barber/configuracoes` e `/barber/usuarios` carregam
+- [x] Login como `admin` no navegador: `/barber/configuracoes` e `/barber/usuarios` carregam
       normalmente (sem redirect para `/Login`), e os links "Configurações"/"Usuários" aparecem no
       `BarberHeader`.
-- [ ] Login como `dono`: comportamento idêntico ao anterior (páginas e links continuam visíveis).
-- [ ] Login como `barbeiro`: `/barber/configuracoes` e `/barber/usuarios` continuam redirecionando
+- [x] Login como `dono`: comportamento idêntico ao anterior (páginas e links continuam visíveis).
+- [x] Login como `barbeiro`: `/barber/configuracoes` e `/barber/usuarios` continuam redirecionando
       para `/Login`; links não aparecem no header.
-- [ ] Visitante (sem login) e `cliente`: acesso direto às duas URLs continua redirecionando para
+- [x] Visitante (sem login) e `cliente`: acesso direto às duas URLs continua redirecionando para
       `/Login`.
-- [ ] Regra transversal do roadmap: `/`, `/Servicos`, `/Login`, `/CriarConta`, `/EsqueciSenha`,
+- [x] Regra transversal do roadmap: `/`, `/Servicos`, `/Login`, `/CriarConta`, `/EsqueciSenha`,
       `/agendamento`, `/meus-servicos` seguem retornando 200 para visitante/cliente sem mudança.
 
 ---
