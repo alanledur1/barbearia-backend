@@ -25,6 +25,7 @@ model User {
 
   appointmentsAsClient Appointment[] @relation("AppointmentClient")
   appointmentsAsStaff  Appointment[] @relation("AppointmentStaff")
+  subscriptions        ClientSubscription[] @relation("ClientSubscriptions")
 }
 
 model Service {
@@ -49,9 +50,11 @@ model Appointment {
   serviceId       Int
   adminId         Int?
   notes           String?
+  subscriptionId  Int?
   admin           User?             @relation("AppointmentStaff", fields: [adminId], references: [id])
   client          User?             @relation("AppointmentClient", fields: [clientId], references: [id])
   service         Service           @relation(fields: [serviceId], references: [id])
+  subscription    ClientSubscription? @relation(fields: [subscriptionId], references: [id])
 }
 
 enum AppointmentStatus {
@@ -82,4 +85,39 @@ model Holiday {
   date      DateTime @unique @db.Date
   reason    String?
   createdAt DateTime @default(now())
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+}
+
+model Plan {
+  id           Int      @id @default(autoincrement())
+  name         String
+  description  String?
+  cutsPerCycle Int
+  price        Float
+  benefits     String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  subscriptions ClientSubscription[]
+}
+
+model ClientSubscription {
+  id                Int                @id @default(autoincrement())
+  clientId          Int
+  planId            Int
+  status            SubscriptionStatus @default(ACTIVE)
+  startDate         DateTime           @default(now())
+  currentCycleStart DateTime           @default(now())
+  cutsUsedInCycle   Int                @default(0)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  client       User          @relation("ClientSubscriptions", fields: [clientId], references: [id])
+  plan         Plan          @relation(fields: [planId], references: [id])
+  appointments Appointment[]
 }

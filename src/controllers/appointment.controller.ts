@@ -7,7 +7,7 @@ export class AppointmentController {
     // Método para criar um novo agendamento
     async create(req: Request, res: Response) {
         try {
-            const { clientId, client, serviceId, date, notes, adminId } = req.body;
+            const { clientId, client, serviceId, date, notes, adminId, usePlan } = req.body;
 
             // Validação
             if (!serviceId || !date) {
@@ -46,6 +46,7 @@ export class AppointmentController {
                 requestedDateTime: appointmentDate,
                 notes: notes,
                 adminId: adminIntId,
+                usePlan: usePlan === true,
             });
 
             return res.status(201).json(newAppointment);

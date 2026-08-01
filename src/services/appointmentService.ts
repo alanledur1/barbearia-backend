@@ -3,6 +3,7 @@ import { CustomError } from '../utils/customErrors';
 import { prisma } from '../services/prisma.service';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { resolveCurrentCycle } from '../utils/subscriptionCycle';
 
 function parseTimeToMinutes(time: string): number {
     const [h, m] = time.split(':').map(Number);
@@ -18,6 +19,7 @@ type CreateAppointmentPayload = {
     requestedDateTime: Date;
     adminId?: number;
     notes?: string;
+    usePlan?: boolean;
 };
 type ListAllFilters = {
     date?: string;
@@ -161,7 +163,8 @@ export class AppointmentService {
                 client: true,
                 service: true,
                 serviceId: true,
-                admin: { select: { id: true, name: true, email: true } }
+                admin: { select: { id: true, name: true, email: true } },
+                subscription: { select: { id: true, plan: { select: { id: true, name: true } } } },
             },
             orderBy: { date: 'asc' },
         });
@@ -170,12 +173,12 @@ export class AppointmentService {
     async findById(id: number) {
         return await prisma.appointment.findUnique({
             where: { id },
-            include: { client: true, service: true, admin: true },
+            include: { client: true, service: true, admin: true, subscription: { include: { plan: true } } },
         });
     }
 
     async createAppointment(payload: CreateAppointmentPayload): Promise<any> {
-        const { clientId, clientData, serviceId, requestedDateTime, adminId, notes } = payload;
+        const { clientId, clientData, serviceId, requestedDateTime, adminId, notes, usePlan } = payload;
 
         if (requestedDateTime < new Date()) {
             throw new CustomError('A data/hora do agendamento deve ser no futuro.', 400);
@@ -251,9 +254,51 @@ export class AppointmentService {
                 throw new CustomError('Horário selecionado não está disponível.', 409);
             }
 
+            let subscriptionId: number | undefined;
+            if (usePlan) {
+                if (!clientId) {
+                    throw new CustomError('Usar o plano requer estar logado como cliente.', 400);
+                }
+
+                const subscription = await tx.clientSubscription.findFirst({
+                    where: { clientId, status: 'ACTIVE' },
+                    include: { plan: true },
+                });
+
+                if (!subscription || !subscription.plan.active) {
+                    throw new CustomError('Você não possui uma assinatura ativa.', 400);
+                }
+
+                const { cycleStart, cutsUsed } = resolveCurrentCycle(
+                    subscription.currentCycleStart,
+                    subscription.cutsUsedInCycle
+                );
+
+                if (cutsUsed >= subscription.plan.cutsPerCycle) {
+                    throw new CustomError(
+                        'Você já utilizou todos os cortes do seu plano neste ciclo. Prossiga com pagamento avulso.',
+                        400
+                    );
+                }
+
+                await tx.clientSubscription.update({
+                    where: { id: subscription.id },
+                    data: { currentCycleStart: cycleStart, cutsUsedInCycle: cutsUsed + 1 },
+                });
+                subscriptionId = subscription.id;
+            }
+
             return tx.appointment.create({
-                data: appointmentData,
-                include: { client: true, service: true, admin: true },
+                data: {
+                    ...appointmentData,
+                    ...(subscriptionId ? { subscription: { connect: { id: subscriptionId } } } : {}),
+                },
+                include: {
+                    client: true,
+                    service: true,
+                    admin: true,
+                    subscription: { include: { plan: true } },
+                },
             });
         });
         return appointment;
