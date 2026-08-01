@@ -160,7 +160,7 @@ export class AppointmentService {
                 guestName: true,
                 guestEmail: true,
                 guestPhone: true,
-                client: true,
+                client: { select: { id: true, name: true, email: true, phone: true } },
                 service: true,
                 serviceId: true,
                 admin: { select: { id: true, name: true, email: true } },
@@ -173,7 +173,12 @@ export class AppointmentService {
     async findById(id: number) {
         return await prisma.appointment.findUnique({
             where: { id },
-            include: { client: true, service: true, admin: true, subscription: { include: { plan: true } } },
+            include: {
+                client: { select: { id: true, name: true, email: true, phone: true } },
+                service: true,
+                admin: { select: { id: true, name: true, email: true } },
+                subscription: { include: { plan: true } },
+            },
         });
     }
 
@@ -294,9 +299,9 @@ export class AppointmentService {
                     ...(subscriptionId ? { subscription: { connect: { id: subscriptionId } } } : {}),
                 },
                 include: {
-                    client: true,
+                    client: { select: { id: true, name: true, email: true, phone: true } },
                     service: true,
-                    admin: true,
+                    admin: { select: { id: true, name: true, email: true } },
                     subscription: { include: { plan: true } },
                 },
             });
