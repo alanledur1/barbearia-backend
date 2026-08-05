@@ -130,6 +130,33 @@ export class EmailService {
         await this.send(to, subject, text, html);
     }
 
+    // Email de lembrete de agendamento — disparado pelo job appointmentReminder (Epic 11, JobConfig).
+    async sendAppointmentReminder(to: string, data: AppointmentConfirmationData): Promise<void> {
+        const subject = 'Lembrete: seu agendamento é amanhã — Barbearia Shelby';
+        const dateFormatted = formatDateBR(data.date);
+        const barberLine = data.barberName ? `Profissional: ${data.barberName}\n` : '';
+        const barberHtmlLine = data.barberName ? `<p><strong>Profissional:</strong> ${data.barberName}</p>` : '';
+        const text =
+            `Olá, ${data.clientName}!\n\n` +
+            `Passando para lembrar do seu agendamento amanhã na Barbearia Shelby:\n\n` +
+            `Serviço: ${data.serviceName}\n` +
+            `Data/Hora: ${dateFormatted}\n` +
+            barberLine +
+            `\nAté breve!`;
+        const html = `
+            <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
+                <h2 style="color: #f67366;">Lembrete de agendamento</h2>
+                <p>Olá, <strong>${data.clientName}</strong>!</p>
+                <p>Passando para lembrar do seu agendamento <strong>amanhã</strong> na Barbearia Shelby:</p>
+                <p><strong>Serviço:</strong> ${data.serviceName}</p>
+                <p><strong>Data/Hora:</strong> ${dateFormatted}</p>
+                ${barberHtmlLine}
+                <p>Até breve!</p>
+            </div>
+        `;
+        await this.send(to, subject, text, html);
+    }
+
     // Email de boas-vindas — disparado após cadastro de cliente.
     async sendWelcomeEmail(to: string, name: string): Promise<void> {
         const subject = 'Bem-vindo à Barbearia Shelby';

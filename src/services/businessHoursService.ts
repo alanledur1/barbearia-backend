@@ -1,5 +1,6 @@
 import { CustomError } from '../utils/customErrors';
 import { prisma } from './prisma.service';
+import { AuditService, AuditActor } from './auditService';
 
 export type BusinessHoursEntry = {
     dayOfWeek: number;
@@ -11,11 +12,13 @@ export type BusinessHoursEntry = {
 const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 export class BusinessHoursService {
+    private auditService = new AuditService();
+
     async listAll() {
         return prisma.businessHours.findMany({ orderBy: { dayOfWeek: 'asc' } });
     }
 
-    async updateBulk(entries: BusinessHoursEntry[]) {
+    async updateBulk(actor: AuditActor, entries: BusinessHoursEntry[]) {
         if (!Array.isArray(entries) || entries.length !== 7) {
             throw new CustomError('É necessário enviar exatamente 7 entradas (uma por dia da semana).', 400);
         }
@@ -65,6 +68,7 @@ export class BusinessHoursService {
             )
         );
 
+        await this.auditService.log(actor, 'BUSINESS_HOURS', 'BUSINESS_HOURS_UPDATE', 'BusinessHours', null, { days: entries.length });
         return this.listAll();
     }
 }

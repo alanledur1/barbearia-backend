@@ -44,8 +44,11 @@ export class PlanController {
 
     create = async (req: Request, res: Response) => {
         try {
+            if (!req.user) {
+                return res.status(401).json({ error: 'Não autenticado.' });
+            }
             const { name, description, cutsPerCycle, price, benefits } = req.body;
-            const plan = await this.service.create({ name, description, cutsPerCycle, price, benefits });
+            const plan = await this.service.create({ id: req.user.id, role: req.user.role }, { name, description, cutsPerCycle, price, benefits });
             return res.status(201).json(plan);
         } catch (err: any) {
             if (err instanceof CustomError) {
@@ -58,11 +61,14 @@ export class PlanController {
 
     update = async (req: Request, res: Response) => {
         try {
+            if (!req.user) {
+                return res.status(401).json({ error: 'Não autenticado.' });
+            }
             const id = parseInt(req.params.id as string, 10);
             if (isNaN(id)) {
                 return res.status(400).json({ error: 'ID de plano inválido.' });
             }
-            const plan = await this.service.update(id, req.body);
+            const plan = await this.service.update({ id: req.user.id, role: req.user.role }, id, req.body);
             return res.status(200).json(plan);
         } catch (err: any) {
             if (err instanceof CustomError) {

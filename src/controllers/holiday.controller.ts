@@ -17,11 +17,14 @@ export class HolidayController {
 
     create = async (req: Request, res: Response) => {
         try {
+            if (!req.user) {
+                return res.status(401).json({ error: 'Não autenticado.' });
+            }
             const { date, reason } = req.body;
             if (!date) {
                 return res.status(400).json({ error: 'A data é obrigatória.' });
             }
-            const holiday = await this.service.create({ date, reason });
+            const holiday = await this.service.create({ id: req.user.id, role: req.user.role }, { date, reason });
             return res.status(201).json(holiday);
         } catch (err: any) {
             if (err instanceof CustomError) {
@@ -34,12 +37,15 @@ export class HolidayController {
 
     delete = async (req: Request, res: Response) => {
         try {
+            if (!req.user) {
+                return res.status(401).json({ error: 'Não autenticado.' });
+            }
             const { id } = req.params;
             const holidayId = parseInt(id as string, 10);
             if (isNaN(holidayId)) {
                 return res.status(400).json({ error: 'ID de feriado inválido.' });
             }
-            await this.service.delete(holidayId);
+            await this.service.delete({ id: req.user.id, role: req.user.role }, holidayId);
             return res.status(204).send();
         } catch (err: any) {
             if (err instanceof CustomError) {

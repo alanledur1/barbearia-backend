@@ -17,7 +17,10 @@ export class BusinessHoursController {
 
     updateBulk = async (req: Request, res: Response) => {
         try {
-            const updated = await this.service.updateBulk(req.body);
+            if (!req.user) {
+                return res.status(401).json({ error: 'Não autenticado.' });
+            }
+            const updated = await this.service.updateBulk({ id: req.user.id, role: req.user.role }, req.body);
             return res.status(200).json(updated);
         } catch (err: any) {
             if (err instanceof CustomError) {

@@ -1,6 +1,7 @@
 import { CustomError } from '../utils/customErrors';
 import { prisma } from './prisma.service';
 import { Prisma } from '@prisma/client';
+import { AuditService, AuditActor } from './auditService';
 
 export type CreatePlanData = {
     name: string;
@@ -29,6 +30,8 @@ function validateCutsAndPrice(cutsPerCycle: unknown, price: unknown) {
 }
 
 export class PlanService {
+    private auditService = new AuditService();
+
     // Lista pública — só planos ativos, para quem pode assinar.
     async listActive() {
         return prisma.plan.findMany({ where: { active: true }, orderBy: { price: 'asc' } });
@@ -45,13 +48,13 @@ export class PlanService {
         return plan;
     }
 
-    async create(data: CreatePlanData) {
+    async create(actor: AuditActor, data: CreatePlanData) {
         if (!data.name) {
             throw new CustomError('Nome do plano é obrigatório.', 400);
         }
         validateCutsAndPrice(data.cutsPerCycle, data.price);
 
-        return prisma.plan.create({
+        const plan = await prisma.plan.create({
             data: {
                 name: data.name,
                 description: data.description,
@@ -60,9 +63,11 @@ export class PlanService {
                 benefits: data.benefits,
             },
         });
+        await this.auditService.log(actor, 'PLANS', 'PLAN_CREATE', 'Plan', String(plan.id), { name: data.name });
+        return plan;
     }
 
-    async update(id: number, data: UpdatePlanData) {
+    async update(actor: AuditActor, id: number, data: UpdatePlanData) {
         const existing = await prisma.plan.findUnique({ where: { id } });
         if (!existing) {
             throw new CustomError('Plano não encontrado.', 404);
@@ -83,6 +88,8 @@ export class PlanService {
         if (data.benefits !== undefined) updateData.benefits = data.benefits;
         if (data.active !== undefined) updateData.active = data.active;
 
-        return prisma.plan.update({ where: { id }, data: updateData });
+        const updated = await prisma.plan.update({ where: { id }, data: updateData });
+        await this.auditService.log(actor, 'PLANS', 'PLAN_UPDATE', 'Plan', String(id), { fields: Object.keys(updateData) });
+        return updated;
     }
 }

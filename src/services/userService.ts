@@ -2,6 +2,7 @@ import { CustomError } from '../utils/customErrors';
 import { prisma } from './prisma.service';
 import { Prisma, UserRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { AuditService, AuditActor } from './auditService';
 
 const MANAGEABLE_ROLES: UserRole[] = ['CLIENTE', 'BARBEIRO', 'DONO'];
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -41,6 +42,8 @@ export type UpdateUserData = Partial<{
 }>;
 
 export class UserService {
+    private auditService = new AuditService();
+
     // Lista usuários gerenciáveis por esta feature (cliente/barbeiro/dono), nunca admin.
     async listAll(roleFilter?: string) {
         if (roleFilter !== undefined) {
@@ -66,7 +69,7 @@ export class UserService {
         return user;
     }
 
-    async create(data: CreateUserData) {
+    async create(actor: AuditActor, data: CreateUserData) {
         if (!data.name || !data.email || !data.password) {
             throw new CustomError('Nome, email e senha são obrigatórios.', 400);
         }
@@ -84,7 +87,7 @@ export class UserService {
         }
 
         const hashedPassword = await bcrypt.hash(data.password, 10);
-        return prisma.user.create({
+        const user = await prisma.user.create({
             data: {
                 name: data.name,
                 email: data.email,
@@ -94,11 +97,14 @@ export class UserService {
             },
             select: SAFE_SELECT,
         });
+
+        await this.auditService.log(actor, 'USERS', 'USER_CREATE', 'User', String(user.id), { role: user.role });
+        return user;
     }
 
-    // `actorId` é o id do dono autenticado fazendo a chamada; usado para bloquear auto-edição.
-    async update(actorId: number, targetId: number, data: UpdateUserData) {
-        if (targetId === actorId) {
+    // `actor.id` é o id do dono/admin autenticado fazendo a chamada; usado para bloquear auto-edição.
+    async update(actor: AuditActor, targetId: number, data: UpdateUserData) {
+        if (targetId === actor.id) {
             throw new CustomError('Você não pode editar a própria conta por aqui.', 400);
         }
 
@@ -128,11 +134,13 @@ export class UserService {
         }
 
         try {
-            return await prisma.user.update({
+            const user = await prisma.user.update({
                 where: { id: targetId },
                 data: updateData,
                 select: SAFE_SELECT,
             });
+            await this.auditService.log(actor, 'USERS', 'USER_UPDATE', 'User', String(targetId), { fields: Object.keys(updateData) });
+            return user;
         } catch (error: any) {
             if (error.code === 'P2002' && error.meta?.target?.includes('email')) {
                 throw new CustomError('Este email já está em uso.', 409);

@@ -9,6 +9,7 @@ import holidayRoutes from './holiday.routes';
 import userRoutes from './user.routes';
 import planRoutes from './plan.routes';
 import subscriptionRoutes from './subscription.routes';
+import adminSettingsRoutes from './adminSettings.routes';
 import { UnifiedLoginController } from '../controllers/unifiedLogin.controller';
 import { BillingController } from '../controllers/billing.controller';
 import authMiddleware from '../middlewares/auth.middleware';
@@ -30,6 +31,7 @@ router.use('/holidays', holidayRoutes);
 router.use('/users', userRoutes);
 router.use('/plans', planRoutes);
 router.use('/subscriptions', subscriptionRoutes);
+router.use('/admin-settings', adminSettingsRoutes);
 router.get('/billing/summary', authMiddleware, requireRole('BARBEIRO', 'DONO', 'ADMIN'), billingController.getSummary);
 router.get('/billing/summary/by-barber', authMiddleware, requireRole('DONO', 'ADMIN'), billingController.getSummaryByBarber);
 

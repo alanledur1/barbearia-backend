@@ -38,8 +38,11 @@ export class UserController {
 
     create = async (req: Request, res: Response) => {
         try {
+            if (!req.user) {
+                return res.status(401).json({ error: 'Não autenticado.' });
+            }
             const { name, email, phone, password, role } = req.body;
-            const user = await this.service.create({ name, email, phone, password, role });
+            const user = await this.service.create({ id: req.user.id, role: req.user.role }, { name, email, phone, password, role });
             return res.status(201).json(user);
         } catch (err: any) {
             if (err instanceof CustomError) {
@@ -59,7 +62,7 @@ export class UserController {
             if (!req.user) {
                 return res.status(401).json({ error: 'Não autenticado.' });
             }
-            const user = await this.service.update(req.user.id, id, req.body);
+            const user = await this.service.update({ id: req.user.id, role: req.user.role }, id, req.body);
             return res.status(200).json(user);
         } catch (err: any) {
             if (err instanceof CustomError) {

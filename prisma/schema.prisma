@@ -121,3 +121,40 @@ model ClientSubscription {
   plan         Plan          @relation(fields: [planId], references: [id])
   appointments Appointment[]
 }
+
+// Epic 11 — Configurações do admin: auditoria e filas.
+// AuditLog é somente-leitura pela aplicação (append-only) e não usa @relation para User:
+// actorId/actorName/actorRole são um snapshot no momento da ação, para sobreviver a uma
+// eventual exclusão da conta do ator e para não exigir alteração no model User.
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  actorId   Int
+  actorName String
+  actorRole String
+  action    String
+  entity    String
+  entityId  String?
+  metadata  String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([entity])
+}
+
+// Linha única (id = 1 por convenção de aplicação) com os parâmetros de auditoria.
+model AuditSettings {
+  id             Int      @id @default(autoincrement())
+  retentionDays  Int      @default(90)
+  enabledModules String   @default("USERS,BUSINESS_HOURS,HOLIDAYS,PLANS")
+  updatedAt      DateTime @updatedAt
+}
+
+// Configuração de jobs agendados (node-cron), um registro por jobKey.
+model JobConfig {
+  id             Int       @id @default(autoincrement())
+  jobKey         String    @unique
+  enabled        Boolean   @default(false)
+  cronExpression String
+  lastRunAt      DateTime?
+  updatedAt      DateTime  @updatedAt
+}
