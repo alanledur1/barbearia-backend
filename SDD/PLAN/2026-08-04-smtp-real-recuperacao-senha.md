@@ -104,7 +104,8 @@ com dado de email já disponível no fluxo atual.
 ### Success Criteria
 #### Automated Verification
 - [x] `npm run build` (backend) compila sem erro.
-- [x] Testado manualmente via HTTP (curl/Postman ou browser E2E na Phase 5) — ver Manual Verification.
+- [ ] Teste manual via HTTP (curl/Postman) — não executado nesta sessão, ver nota em "Testing Notes"
+  (sandbox sem Postgres acessível/rede de saída).
 
 #### Manual Verification
 - [ ] `POST /api/auth/forgot-password` com email existente cria um `Otp` no banco e dispara o email
@@ -141,22 +142,35 @@ com dado de email já disponível no fluxo atual.
 
 ## Phase 4: Frontend — EsqueciSenha real
 ### Tasks
-- [ ] `OtpVerification.tsx` — prop `email` (usada no texto informativo), prop `onResend`
+- [x] `OtpVerification.tsx` — prop `email` (usada no texto informativo), prop `onResend`
   (substitui o `href=""` morto), prop `apiError` (mensagem de erro da API).
-- [ ] `NovaSenha.tsx` — prop `apiError`, mesma precedência de exibição de `CriarConta.tsx`.
-- [ ] `EsqueciSenha/page.tsx` — os 3 handlers passam a chamar `api.post('/auth/...')` (ver Spec para
+- [x] `NovaSenha.tsx` — prop `apiError`, mesma precedência de exibição de `CriarConta.tsx`.
+- [x] `EsqueciSenha/page.tsx` — os 3 handlers passam a chamar `api.post('/auth/...')` (ver Spec para
   payload de cada chamada), com loading/erro tratados, `handleResendCode` novo, mensagem de sucesso
   final substituindo o `alert()` (mesmo padrão de `CriarConta/page.tsx`: banner fixo + redirect para
   `/Login`).
 
 ### Success Criteria
 #### Automated Verification
-- [ ] `npm run build` (frontend) gera todas as rotas sem erro.
-- [ ] `npx eslint src/app/EsqueciSenha src/components/EsqueciSenha` limpo.
+- [x] `npx tsc --noEmit` (frontend) limpo, sem erro de tipo.
+- [x] `npx eslint src/app/EsqueciSenha src/components/EsqueciSenha` limpo.
+- [ ] `npm run build` (`next build`, com geração de todas as rotas) — **não executado nesta
+  sessão**: o sandbox Linux usado para os comandos não tem acesso de rede de saída (proxy allowlist
+  bloqueia registry.npmjs.org/github.com/DNS externo) e não possui o binário nativo SWC para
+  linux-x64 (o repositório só tem o binário win32 instalado); `next build`/`next dev` (Turbopack)
+  dependem desse binário nativo e não puderam ser baixados. `tsc --noEmit` + `eslint` (que não
+  dependem de binário nativo) cobrem a validação de tipo e as regras `next/core-web-vitals` —
+  substituto parcial, não equivalente a rodar `next build` de verdade. Pendência explícita.
 
 #### Manual Verification
-- [ ] Fluxo completo via browser: email → código (recebido via preview Ethereal) → nova senha →
-  redirect para `/Login` → login com a nova senha funciona.
+- [ ] **Não executado nesta sessão** (mesma limitação de ambiente acima, agravada pela ausência de
+  Postgres acessível e de rede para SMTP/Ethereal dentro do sandbox, e pela falta de uma ferramenta
+  neste ambiente para rodar comandos diretamente na máquina Windows real do usuário — só o sandbox
+  Linux isolado estava disponível). Os itens abaixo precisam ser confirmados localmente pelo usuário
+  (`npm run dev` nos dois repos, conforme `CLAUDE.md` de cada um) antes de considerar o epic
+  validado ponta a ponta:
+- [ ] Fluxo completo via browser: email → código (recebido via preview Ethereal, ou real se
+  `SMTP_*` for configurado) → nova senha → redirect para `/Login` → login com a nova senha funciona.
 - [ ] "Reenviar" funciona de verdade (gera novo código, código antigo passa a ser rejeitado).
 - [ ] Código errado/expirado mostra mensagem de erro inline, sem quebrar a tela.
 - [ ] Regra transversal: visitante/cliente não-logado continuam acessando `/EsqueciSenha` e as
@@ -168,11 +182,32 @@ com dado de email já disponível no fluxo atual.
 ## Testing Notes
 - Unit tests: não há suíte de teste de backend configurada no projeto (fora de escopo criar uma
   nesta execução, consistente com epics anteriores).
-- Integration tests: não há suíte de teste de integração de API — validação é via chamada HTTP real
-  (curl/browser) descrita nas Manual Verification acima.
-- Manual steps: 1) rodar backend + frontend localmente; 2) percorrer o fluxo completo de
-  `/EsqueciSenha` via browser; 3) confirmar preview Ethereal de cada email disparado (reset,
-  agendamento, boas-vindas); 4) confirmar login com a nova senha.
+- Integration tests: não há suíte de teste de integração de API — validação seria via chamada HTTP
+  real (curl/browser) descrita nas Manual Verification de cada fase acima.
+- Manual steps (não executados nesta sessão): 1) rodar backend + frontend localmente; 2) percorrer o
+  fluxo completo de `/EsqueciSenha` via browser; 3) confirmar preview Ethereal (ou envio real, se
+  `SMTP_*` configurado) de cada email disparado (reset, agendamento, boas-vindas); 4) confirmar login
+  com a nova senha.
+- **Limitação de ambiente desta execução (pendência explícita)**: toda a implementação foi feita e
+  validada estaticamente (compilação `tsc`/`npm run build` do backend, `tsc --noEmit` + `eslint` do
+  frontend, e revisão manual linha a linha de cada arquivo tocado contra a Spec), mas nenhum teste em
+  runtime (servidor rodando, banco de dados, envio de email real ou via Ethereal, `next build`
+  completo, ou navegador) pôde ser executado nesta sessão:
+  - O único ambiente de shell disponível é um sandbox Linux isolado, sem acesso de rede de saída
+    (proxy allowlist bloqueia `registry.npmjs.org`, `github.com`, resolução DNS externa em geral —
+    confirmado via `curl`/`getaddrinfo`) e sem privilégio de root/apt para instalar Postgres local.
+  - `DATABASE_URL` aponta para `localhost:5432`, inacessível a partir do sandbox (porta fechada,
+    confirmado).
+  - `next build`/`next dev` (Turbopack) do frontend dependem de um binário nativo SWC
+    (`@next/swc-linux-x64-gnu`) que não está instalado (só o `swc-win32-x64-msvc` do Windows real
+    está presente) e não pôde ser baixado (mesmo bloqueio de rede).
+  - Não havia, nesta sessão, nenhuma ferramenta para executar comandos diretamente na máquina
+    Windows real do usuário (onde o projeto de fato roda) — só o sandbox Linux isolado.
+  - Recomendação: o usuário deve rodar `npm run dev` nos dois repos localmente (comandos documentados
+    nos `CLAUDE.md` de cada um) e percorrer manualmente o checklist de Manual Verification de cada
+    fase acima antes de considerar o epic 100% validado ponta a ponta. Sem `SMTP_HOST` configurado
+    no `.env`, o `EmailService` cai automaticamente no fallback Ethereal (preview URL logada no
+    console do backend) — não é necessária nenhuma credencial real para esse teste local.
 
 ## Migration Notes
 - Não aplicável — nenhuma alteração de schema Prisma é necessária nesta feature. O model `Otp` já
