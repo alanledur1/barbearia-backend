@@ -77,18 +77,26 @@ npx prisma generate        # Regenerar o Prisma Client
 ```
 DATABASE_URL=
 JWT_SECRET=
-EMAIL_USER=
-EMAIL_PASS=
+SMTP_HOST=
+SMTP_PORT=
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=
 WHATSAPP_TOKEN=
 WHATSAPP_PHONE_ID=
 WHATSAPP_BUSINESS_ID=
 ```
 
+Ver `.env.example` para o template (só nomes, sem valor). Se `SMTP_HOST` não estiver definido,
+`EmailService` (`src/notifications/email.service.ts`) cai automaticamente para uma conta de teste
+Ethereal (preview logada no console) — não bloqueia dev/QA sem credencial SMTP real.
+
 ## Rotas (API)
 
 Definidas em `src/routes/`:
 
-- `auth.routes.ts` — login/registro
+- `auth.routes.ts` — login/registro, e fluxo "Esqueci Senha" (`POST /forgot-password`,
+  `POST /verify-reset-otp`, `POST /reset-password`, todas públicas, OTP de 6 dígitos via email)
 - `admin.routes.ts` — endpoints administrativos
 - `client.routes.ts` — endpoints de cliente
 - `appointment.routes.ts` — agendamentos

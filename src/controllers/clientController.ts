@@ -3,6 +3,7 @@ import { clientSchema } from "../schemas/clientSchema";
 import { ClientService } from "../services/clientService";
 import { CustomError } from '../utils/customErrors';
 import { ZodError } from 'zod';
+import { EmailService } from '../notifications/email.service';
 
 export class ClientController {
 
@@ -21,6 +22,14 @@ export class ClientController {
             }
 
             const client = await this.clientService.register({ name, email, phone, password });
+
+            // Dispara o email de boas-vindas de forma não bloqueante — falha no envio
+            // não deve impedir nem atrasar a resposta do cadastro.
+            if (client.email) {
+                new EmailService().sendWelcomeEmail(client.email, client.name)
+                    .catch((err: any) => console.error('Falha ao enviar email de boas-vindas:', err));
+            }
+
             return res.status(201).json(client);
         } catch (err: any) {
             if (err instanceof CustomError) {

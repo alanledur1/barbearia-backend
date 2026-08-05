@@ -2,6 +2,13 @@ import bcrypt from "bcryptjs";
 import { prisma } from "./prisma.service";
 import { signUserToken } from "../utils/jwt";
 import { CustomError } from "../utils/customErrors";
+import { EmailService } from "../notifications/email.service";
+
+const OTP_TTL_MS = 10 * 60 * 1000; // 10 minutos
+
+function generateOtpCode(): string {
+    return String(Math.floor(100000 + Math.random() * 900000));
+}
 
 type RegisterStaffData = {
     name: string;
@@ -109,5 +116,66 @@ export class AuthService {
                 updatedAt: true,
             },
         })
+    }
+
+    // Passo 1 do fluxo "Esqueci Senha": gera e envia um código OTP de 6 dígitos.
+    // Não lança erro para email inexistente — quem não existe simplesmente não recebe
+    // nada, e o controller responde de forma genérica em ambos os casos (evita
+    // enumeração de usuários). Só propaga erro se o envio do email falhar (o usuário
+    // precisa saber que o código não foi enviado por falha de infraestrutura).
+    async forgotPassword(email: string): Promise<void> {
+        const user = await prisma.user.findUnique({ where: { email } });
+        if (!user) {
+            return;
+        }
+
+        // Invalida qualquer código anterior ainda válido para este email.
+        await prisma.otp.deleteMany({ where: { email } });
+
+        const code = generateOtpCode();
+        await prisma.otp.create({
+            data: {
+                email,
+                code,
+                expiresAt: new Date(Date.now() + OTP_TTL_MS),
+            },
+        });
+
+        await new EmailService().sendPasswordResetOtp(email, code);
+    }
+
+    // Passo 2: valida o código digitado, sem consumi-lo (o consumo definitivo
+    // acontece em resetPassword, no passo 3).
+    async verifyResetOtp(email: string, code: string): Promise<void> {
+        const otp = await prisma.otp.findFirst({
+            where: { email, code },
+            orderBy: { createdAt: 'desc' },
+        });
+
+        if (!otp || otp.expiresAt < new Date()) {
+            throw new CustomError('Código inválido ou expirado.', 400);
+        }
+    }
+
+    // Passo 3: revalida o código e, se válido, troca a senha e invalida o(s) OTP(s)
+    // daquele email (uso único).
+    async resetPassword(email: string, code: string, newPassword: string): Promise<void> {
+        const otp = await prisma.otp.findFirst({
+            where: { email, code },
+            orderBy: { createdAt: 'desc' },
+        });
+
+        if (!otp || otp.expiresAt < new Date()) {
+            throw new CustomError('Código inválido ou expirado.', 400);
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        await prisma.user.update({
+            where: { email },
+            data: { password: hashedPassword },
+        });
+
+        await prisma.otp.deleteMany({ where: { email } });
     }
 }

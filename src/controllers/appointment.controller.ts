@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { AppointmentService } from '../services/appointmentService';
 import { CustomError } from '../utils/customErrors';
 import { fromZonedTime } from 'date-fns-tz';
+import { EmailService } from '../notifications/email.service';
 
 export class AppointmentController {
     // Método para criar um novo agendamento
@@ -48,6 +49,19 @@ export class AppointmentController {
                 adminId: adminIntId,
                 usePlan: usePlan === true,
             });
+
+            // Dispara o email de confirmação de forma não bloqueante — falha no envio
+            // não deve impedir nem atrasar a resposta do agendamento.
+            const recipientEmail: string | undefined = newAppointment.client?.email ?? newAppointment.guestEmail ?? undefined;
+            const recipientName: string = newAppointment.client?.name ?? newAppointment.guestName ?? 'Cliente';
+            if (recipientEmail) {
+                new EmailService().sendAppointmentConfirmation(recipientEmail, {
+                    clientName: recipientName,
+                    serviceName: newAppointment.service?.name,
+                    date: newAppointment.date,
+                    barberName: newAppointment.admin?.name,
+                }).catch((err: any) => console.error('Falha ao enviar email de confirmação de agendamento:', err));
+            }
 
             return res.status(201).json(newAppointment);
         } catch (err: any) {
