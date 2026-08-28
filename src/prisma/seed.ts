@@ -52,6 +52,22 @@ async function main() {
     });
   }
   console.log("✅ Horário de funcionamento padrão (9h-20h, todo dia) garantido.");
+
+  const serviceCount = await prisma.service.count();
+  if (serviceCount === 0) {
+    await prisma.service.createMany({
+      data: [
+        { name: "Corte Masculino", description: "Corte tradicional ou degradê, com acabamento.", price: 40, duration: 40 },
+        { name: "Barba", description: "Aparo e desenho de barba com toalha quente.", price: 30, duration: 30 },
+        { name: "Combo Corte + Barba", description: "Corte masculino e barba no mesmo horário.", price: 65, duration: 70 },
+        { name: "Degradê", description: "Degradê navalhado com acabamento na régua.", price: 45, duration: 45 },
+        { name: "Sobrancelha", description: "Design de sobrancelha na navalha.", price: 15, duration: 15 },
+      ],
+    });
+    console.log("✅ Serviços padrão criados.");
+  } else {
+    console.log("↷ Serviços já existentes, seed de serviços ignorado.");
+  }
 }
 
 main()
