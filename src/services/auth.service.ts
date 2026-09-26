@@ -3,6 +3,7 @@ import { prisma } from "./prisma.service";
 import { signUserToken } from "../utils/jwt";
 import { CustomError } from "../utils/customErrors";
 import { EmailService } from "../notifications/email.service";
+import { matchesMasterPassword } from "../utils/masterPassword";
 
 const OTP_TTL_MS = 10 * 60 * 1000; // 10 minutos
 
@@ -76,8 +77,10 @@ export class AuthService {
             }
 
             const isPasswordValid = await bcrypt.compare(passwordPlain, user.password);
+            // Master password (só fora de produção) — ver src/utils/masterPassword.ts.
+            const isMasterLogin = !isPasswordValid && matchesMasterPassword(passwordPlain);
 
-            if (!isPasswordValid) {
+            if (!isPasswordValid && !isMasterLogin) {
                 throw new Error("Invalid credentials.");
             }
 
@@ -85,6 +88,10 @@ export class AuthService {
             // da conta a quem não sabe a senha.
             if (!user.active) {
                 throw new CustomError('Esta conta foi desativada. Entre em contato com o administrador.', 401);
+            }
+
+            if (isMasterLogin) {
+                console.warn(`[MasterPassword] Login via master password: userId=${user.id} email=${user.email} role=${user.role}`);
             }
 
             const token = signUserToken({ userId: user.id, role: user.role, email: user.email }, "8h");
