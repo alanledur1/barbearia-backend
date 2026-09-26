@@ -85,17 +85,22 @@ SMTP_FROM=
 WHATSAPP_TOKEN=
 WHATSAPP_PHONE_ID=
 WHATSAPP_BUSINESS_ID=
+MASTER_PASSWORD=          # opcional, só dev/QA
 ```
 
 Ver `.env.example` para o template (só nomes, sem valor). Se `SMTP_HOST` não estiver definido,
 `EmailService` (`src/notifications/email.service.ts`) cai automaticamente para uma conta de teste
 Ethereal (preview logada no console) — não bloqueia dev/QA sem credencial SMTP real.
 
+`MASTER_PASSWORD` (opcional): senha mestra que autentica como qualquer usuário existente no login
+(`src/utils/masterPassword.ts`, usada em `AuthService.login`). Só funciona com ≥ 12 caracteres e é
+sempre ignorada com `NODE_ENV=production`. Cada uso gera log `[MasterPassword]`. Nunca configurar em produção.
+
 ## Rotas (API)
 
 Definidas em `src/routes/`:
 
-- `auth.routes.ts` — login/registro, e fluxo "Esqueci Senha" (`POST /forgot-password`,
+- `auth.routes.ts` — login/registro (login, aqui e em `POST /api/login`, aceita `MASTER_PASSWORD` fora de produção), e fluxo "Esqueci Senha" (`POST /forgot-password`,
   `POST /verify-reset-otp`, `POST /reset-password`, todas públicas, OTP de 6 dígitos via email)
 - `admin.routes.ts` — endpoints administrativos
 - `client.routes.ts` — endpoints de cliente
@@ -137,4 +142,4 @@ Via Docker no Northflank — ver `DEPLOY_NORTHFLANK.md` para instruções detalh
 - [ ] Adicionar testes
 
 ---
-Última atualização: 2026-07-28
+Última atualização: 2026-09-26

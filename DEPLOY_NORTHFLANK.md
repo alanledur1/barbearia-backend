@@ -26,6 +26,8 @@ JWT_SECRET=troque_por_um_segredo_forte
 RUN_MIGRATIONS_ON_START=false
 ```
 
+**Nao configure `MASTER_PASSWORD` em producao.** Ela e so para desenvolvimento/QA e, mesmo se definida, e ignorada com `NODE_ENV=production` (o backend loga um aviso no boot).
+
 Use a connection string da Neon em `DATABASE_URL`. Para este backend pequeno, a URL direta da Neon costuma ser a opcao mais simples, especialmente porque o mesmo valor pode ser usado pelo Prisma Migrate.
 
 Se ativar e-mail ou WhatsApp, configure tambem:
