@@ -67,3 +67,6 @@ Thumbs.db
 uploads/
 temp/
 *.swp
+
+# Metadados do Windows (Alternate Data Stream copiado via WSL)
+*:Zone.Identifier
