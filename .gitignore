@@ -69,4 +69,5 @@ temp/
 *.swp
 
 # Metadados do Windows (Alternate Data Stream copiado via WSL)
-*:Zone.Identifier
+# sem ":" para pegar também a variante "" que o WSL cria no disco
+*Zone.Identifier
