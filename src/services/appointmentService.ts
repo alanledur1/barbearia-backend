@@ -23,6 +23,8 @@ type CreateAppointmentPayload = {
 };
 type ListAllFilters = {
     date?: string;
+    startDate?: string;
+    endDate?: string;
     clientId?: number;
 };
 // Tipo de update para incluir o endDate opcional
@@ -145,6 +147,14 @@ export class AppointmentService {
             startDate.setUTCHours(0, 0, 0, 0);
             const endDate = new Date(startDate);
             endDate.setUTCDate(startDate.getUTCDate() + 1);
+            where.date = { gte: startDate, lt: endDate };
+        } else if (filters.startDate && filters.endDate) {
+            // Range inclusivo de dias (agenda semanal/mensal) — endDate é o último dia incluído.
+            const startDate = new Date(filters.startDate);
+            startDate.setUTCHours(0, 0, 0, 0);
+            const endDate = new Date(filters.endDate);
+            endDate.setUTCHours(0, 0, 0, 0);
+            endDate.setUTCDate(endDate.getUTCDate() + 1);
             where.date = { gte: startDate, lt: endDate };
         }
 

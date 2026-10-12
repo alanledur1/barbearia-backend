@@ -111,7 +111,7 @@ export class AppointmentController {
     async listAll(req: Request, res: Response) {
         try {
             // Extrai os possíveis filtros da query string da URL
-            const { date, clientId } = req.query;
+            const { date, startDate, endDate, clientId } = req.query;
 
             // Cliente só pode listar os próprios agendamentos, independente da query recebida
             const effectiveClientId = req.user?.role === 'CLIENTE'
@@ -123,6 +123,8 @@ export class AppointmentController {
             // Passa os filtros para a camada de serviço
             const appointments = await appointmentService.listAll({
                 date: date as string | undefined,
+                startDate: startDate as string | undefined,
+                endDate: endDate as string | undefined,
                 clientId: effectiveClientId
             });
 
